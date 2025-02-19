@@ -51,3 +51,6 @@ changes by repo:
         - replace gradle binaries path to artifactory
     - opensearch-sql
         - replace gradle binaries path to artifactory
+    - opensearch-prometheus-exporter-plugin-for-opensearch
+        - replace gradle binaries path to artifactory
+        - add a build script to sync itself with opensearch-build
