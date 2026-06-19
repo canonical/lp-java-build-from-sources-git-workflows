@@ -39,41 +39,25 @@ if [ -z "${LP_USERNAME}" ] || [ "${#VERSIONS[@]}" -eq 0 ]; then
 fi
 
 declare -a REPOS=(
-    OpenSearch
-    common-utils
-    opensearch-learning-to-rank-base
-    opensearch-remote-metadata-sdk
-    job-scheduler
-    security
     k-NN
-    geospatial
-    cross-cluster-replication
-    ml-commons
-    neural-search
-    notifications
-    observability
-    reporting
-    sql
-    asynchronous-search
-    anomaly-detection
-    alerting
-    security-analytics
-    index-management
-    performance-analyzer
-    custom-codecs
-    flow-framework
-    skills
-    query-insights
-    opensearch-system-templates
-    opensearch-prometheus-exporter
 )
 LP_SOSS_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/soss/+source"
 LP_PUBLIC_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/~data-platform/opensearch-project-components/+git" # opensearch-project-components
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_BASE="${SCRIPT_DIR}/opensearch-repos"
+
+# If repo base directory doesn't exist, create it
+if [ ! -d "${REPO_BASE}" ]; then
+    mkdir -p "${REPO_BASE}"
+fi
+
+
 for repo in "${REPOS[@]}"; do
+
     echo "${repo}"
 
-    pushd ../.. || exit 1
+    cd "${REPO_BASE}"
 
     # clone main branch of upstream repo
     local_repo="$(echo "${repo}" | awk '{print tolower($0)}')"
@@ -83,13 +67,21 @@ for repo in "${REPOS[@]}"; do
 
     echo "$local_repo"
 
-    [ -d "${local_repo}" ] || git clone --single-branch --branch main "https://github.com/opensearch-project/${repo}.git" "${local_repo}"
-    pushd "${local_repo}" || exit 1
+    if [[ "${repo}" == "performance-analyzer-rca" ]]; then
+        [ -d "${local_repo}" ] || git clone \
+            "https://github.com/opensearch-project/${repo}.git" "${local_repo}"
+    else
+        [ -d "${local_repo}" ] || git clone --single-branch --branch main \
+            "https://github.com/opensearch-project/${repo}.git" "${local_repo}"
+    fi
+
+    cd "${local_repo}" || exit 1
 
     git remote -v
+
     # fetch all tags
-    # git pull
     git fetch --all --tags
+    git checkout -- . 2>/dev/null || true
 
     # add launchpad remote for push
     lp_remote="${LP_PUBLIC_REMOTE}"
@@ -98,37 +90,37 @@ for repo in "${REPOS[@]}"; do
     fi
     git remote add launchpad "${lp_remote}/${local_repo}" || true
 
-    # TODO: add case of opensearch-performance-analyzer-rca:
-      # - pull branch on rca (not tag based)
-      # - checkout new lp-version branch out of it
-      # - change branch name on build.gradle of performance-analyzer (add lp- prefix)
 
     for version in "${VERSIONS[@]}"; do
         GH_BRANCH="${version}"
         LP_BRANCH="lp-${version}"
 
+
         # add remote version branch
-        if dpkg --compare-versions "${version}" gt "2.9"; then
-            GH_BRANCH="main"
-        fi
-        git remote set-branches --add "origin" "${GH_BRANCH}"
+        if [[ "${repo}" == "performance-analyzer-rca" ]]; then
+            source_ref="origin/2.x"
+            version_tag="${version}.0"
+            GH_BRANCH="2.x"
+        else
+            # tag format may change between build project and components
+            ref_name="${version}.*"
+            if [ "${repo}" == "opensearch-build" ] || [ "${repo}" == "OpenSearch" ]; then
+                ref_name="${version}"
+            fi
 
-        # tag format may change between build project and components
-        ref_name="${version}.*"
-        if [ "${repo}" == "opensearch-build" ] || [ "${repo}" == "OpenSearch" ]; then
-            ref_name="${version}"
+            # get version / release tag and associated commit
+            version_tag="$(git tag -l --sort=version:refname "${ref_name}" | tail -1)"
+            if [[ -z "${version_tag}" ]]; then
+                echo "Skipping ${repo} ${version}: no matching tag for ${ref_name}"
+                continue
+            fi
+            source_ref="${version_tag}"
         fi
-
-        # get version / release tag and associated commit
-        version_tag="$(git tag -l --sort=version:refname "${ref_name}" | tail -1)"
-        gh_release_commit="$(git show-ref -s "${version_tag}")"
+        gh_release_commit="$(git rev-list -n1 "${source_ref}")"
 
         # checkout version branch
-        if dpkg --compare-versions "${version}" lt "2.9"; then
-            git checkout -b "${GH_BRANCH}" "${gh_release_commit}"
-        else
-            git checkout "${gh_release_commit}"
-        fi
+        git checkout -f -B "${GH_BRANCH}" "${gh_release_commit}"
+
         # create lp branch based on the version branch
         git checkout -B "${LP_BRANCH}"
 
@@ -136,32 +128,18 @@ for repo in "${REPOS[@]}"; do
         lp_tag_name="lp-v${version_tag}"
         git tag -a "${lp_tag_name}" "${gh_release_commit}" -m "tagging commit with tag: ${lp_tag_name}" --force
 
-                # push lp version branch to LP
-        git push --set-upstream launchpad "${LP_BRANCH}"
-        git push launchpad --delete "${lp_tag_name}" || true
-        git push launchpad "${lp_tag_name}"
-
-        # delete default main remote LP branch
-        git push launchpad --delete main || true
     done
-
-    popd || exit 1
-    popd || exit 1
 done
 
 # ------------------------
 
 # performance analyzer RCA, and faiss and nmslib
 declare -a ALTERNATE_REPOS=(
-    https://github.com/opensearch-project/performance-analyzer-rca.git
-    https://github.com/facebookresearch/faiss.git
-    https://github.com/nmslib/nmslib.git
-    https://github.com/google/googletest.git
 )
 for repo in "${ALTERNATE_REPOS[@]}"; do
     echo "${repo}"
 
-    pushd ../.. || exit 1
+    cd "${REPO_BASE}"
 
     local_repo="$(echo "${repo}" | awk '{print tolower($0)}' | awk -F/ '{print $NF}' | awk -F. '{print $1}')"
     if [[ ${repo} == *opensearch-project* ]]; then
@@ -175,21 +153,14 @@ for repo in "${ALTERNATE_REPOS[@]}"; do
         main_branch="master"
     fi
     [ -d "${local_repo}" ] || git clone --single-branch --branch "${main_branch}" "${repo}" "${local_repo}"
-    pushd "${local_repo}" || exit 1
+    cd "${local_repo}" || exit 1
 
     # fetch all tags
     git pull
     git fetch --all --tags
 
     # add launchpad remote for push
-    git remote add launchpad "${LP_PUBLIC_REMOTE}/${local_repo}" || true
+    git remote remove launchpad 2>/dev/null || true
+    git remote add launchpad "${LP_PUBLIC_REMOTE}/${local_repo}"
 
-    # push lp version branch to LP
-    git push -f --set-upstream launchpad "${main_branch}"
-
-    # rename default main branch created by soss
-    git push launchpad --delete old_main || true
-
-    popd || exit 1
-    popd || exit 1
 done
