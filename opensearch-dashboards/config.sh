@@ -1,0 +1,1 @@
+export LP_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/~data-platform/opensearch-project-dashboards-components/+git"

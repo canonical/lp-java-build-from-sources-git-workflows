@@ -1,93 +1,99 @@
-# Copyright 2026 Canonical Ltd.
-# See LICENSE file for licensing details.
-#
-# This file defines the configuration for concierge.
-# Concierge (https://github.com/jnsgruk/concierge) is a utility used to
-# provision charm development and testing machines.
-# This file is used automatically by spread.
-
-#
-# Each step is delegated to an existing bash script under ./scripts.
-# Task is used purely as the sequencer: it passes the inputs through,
-# runs the steps in order, and aborts the whole flow if any step fails.
-#
-# Usage:
-#   task all VERSION=2.19.5 USERNAME=jdoe      # run the full flow
-#   task clone VERSION=2.19.5 USERNAME=jdoe    # run a single step
-#   task --list                                # see all steps
-#
-# NOTE: rename the script paths below to match your actual filenames.
- 
 version: '3'
- 
-silent: true
- 
-vars:
-  SCRIPTS: ./opensearch
- 
+silent: false
+
 tasks:
   default:
-    desc: List available steps
     cmds:
       - task --list
- 
+
+  clone-build:
+    desc: "Clone opensearch-build and merge upstream"
+    cmds:
+      - "bash ./scripts/0-opensearch-build.sh"
+
   all:
-    desc: "Full flow: clone+tag -> gradle wrappers -> push -> clone build -> localize manifests"
-    requires:
-      vars: [VERSION, USERNAME]
+    desc: "Opensearch and dashboards full workflow"
     cmds:
-      - task: clone
-      - task: update-wrappers
-      - task: push
-      - task: clone-opensearch-build
-      - task: update-manifests
- 
-  clone:
-    desc: |
-      "Step 1: clone all repos + plugins and configure the tag locally.
-      To run this step 'task clone VERSION=2.19.5 USERNAME=jdoe' must be used.
-      The VERSION and USERNAME can be set in the environment or passed as arguments to task."
-    requires:
-      vars: [VERSION, USERNAME]
-    cmds:
-      - "{{.SCRIPTS}}/lp_clone_all.sh -v {{.VERSION}} -u {{.USERNAME}}"
+      - task: clone-build
+      - task: opensearch:all
+      - task: dashboards:all
 
-  clean-repos:
-    desc: "Clean all repos cloned in the ./opensearch/opensearch-repos directory"
+  opensearch:all:
+    desc: "OpenSearch: full workflow"
     cmds:
-      - "rm -rf ./opensearch/opensearch-repos/*"
- 
-  update-wrappers:
-    desc: "Step 2: update the gradle wrappers in the repositories"
-    requires:
-      vars: [VERSION]
-    cmds:
-      - "{{.SCRIPTS}}/lp_change_gradle_distro.sh -v {{.VERSION}}"
- 
-  push-to-launchpad:
-    desc: "Step 3: push the localized repos to the local git remote"
-    requires:
-      vars: [VERSION]
-    cmds:
-      - "{{.SCRIPTS}}/lp_push.sh -v {{.VERSION}}"
+      - task: opensearch:parse-manifest
+      - task: opensearch:clone
+      - task: opensearch:patch
+      - task: opensearch:push
+      - task: opensearch:update-manifest
+      - task: opensearch:update-launchpad
 
-  patch-spotless:
-    desc: "Step 3.5: patch the spotless plugin to avoid build failures"
-    requires:
-      vars: [VERSION]
+  opensearch:parse-manifest:
+    desc: "OpenSearch: read manifest and write repos.txt"
     cmds:
-      - "{{.SCRIPTS}}/lp_patch_spotless.sh --version {{.VERSION}}"
- 
-  clone-opensearch-build:
-    desc: "Step 4: clone opensearch-build at the matching version"
-    requires:
-      vars: [LAST_VERSION, VERSION, USERNAME]
+      - ". ./config.sh && python3 ./scripts/parse_manifest.py opensearch"
+
+  opensearch:clone:
+    desc: "OpenSearch: clone all repos, create LP branches and tags"
     cmds:
-      - "{{.SCRIPTS}}/lp_clone_opensearch_build.sh --lp-user {{.USERNAME}} --last-version {{.LAST_VERSION}} --new-version {{.VERSION}}"
- 
-  update-opensearch-build-manifests:
-    desc: "Step 5: rewrite manifest URLs from upstream to local mirror"
-    requires:
-      vars: [VERSION]
+      - "bash ./scripts/1-clone.sh opensearch"
+
+  opensearch:patch:
+    desc: "OpenSearch: apply patches"
     cmds:
-      - "{{.SCRIPTS}}/lp_update_manifests.sh --version {{.VERSION}}"
+      - "bash ./scripts/2-patch.sh opensearch"
+
+  opensearch:push:
+    desc: "OpenSearch: push branches and tags to Launchpad"
+    cmds:
+      - "bash ./scripts/3-push.sh opensearch"
+
+  opensearch:update-manifest:
+    desc: "OpenSearch: update manifest URLs"
+    cmds:
+      - "bash ./scripts/update_manifest.sh opensearch"
+
+  opensearch:update-launchpad:
+    desc: "OpenSearch: update .launchpad.yaml"
+    cmds:
+      - "bash ./scripts/update_launchpad.sh opensearch"
+
+  dashboards:all:
+    desc: "Dashboards: full workflow"
+    cmds:
+      - task: dashboards:parse-manifest
+      - task: dashboards:clone
+      - task: dashboards:patch
+      - task: dashboards:push
+      - task: dashboards:update-manifest
+      - task: dashboards:update-launchpad
+
+  dashboards:parse-manifest:
+    desc: "Dashboards: read manifest and write repos.txt"
+    cmds:
+      - ". ./config.sh && python3 ./scripts/parse_manifest.py opensearch-dashboards"
+
+  dashboards:clone:
+    desc: "Dashboards: clone all repos, create LP branches and tags"
+    cmds:
+      - "bash ./scripts/1-clone.sh opensearch-dashboards"
+
+  dashboards:patch:
+    desc: "Dashboards: apply patches"
+    cmds:
+      - "bash ./scripts/2-patch.sh opensearch-dashboards"
+
+  dashboards:push:
+    desc: "Dashboards: push branches and tags to Launchpad"
+    cmds:
+      - "bash ./scripts/3-push.sh opensearch-dashboards"
+
+  dashboards:update-manifest:
+    desc: "Dashboards: update manifest URLs"
+    cmds:
+      - "bash ./scripts/update_manifest.sh opensearch-dashboards"
+
+  dashboards:update-launchpad:
+    desc: "Dashboards: update .launchpad.yaml"
+    cmds:
+      - "bash ./scripts/update_launchpad.sh opensearch-dashboards"

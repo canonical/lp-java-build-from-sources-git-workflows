@@ -1,4 +1,4 @@
-# Gitignore 
-
 .env
-opensearch-repos
+opensearch-build/
+opensearch/repos*
+opensearch-dashboards/repos*
