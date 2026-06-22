@@ -1,0 +1,61 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+version: '3'
+ 
+silent: true
+ 
+vars:
+  SCRIPTS: ./opensearch
+ 
+tasks:
+  
+  clone:
+    desc: |
+      "Step 1: clone all repos + plugins and configure the tag locally.
+      To run this step 'task clone VERSION=2.19.5 USERNAME=jdoe' must be used.
+      The VERSION and USERNAME can be set in the environment or passed as arguments to task."
+    requires:
+      vars: [VERSION, USERNAME]
+    cmds:
+      - "{{.SCRIPTS}}/lp_clone_all.sh -v {{.VERSION}} -u {{.USERNAME}}"
+
+  clean-repos:
+    desc: "Clean all repos cloned in the ./opensearch/opensearch-repos directory"
+    cmds:
+      - "rm -rf ./opensearch/opensearch-repos/*"
+ 
+  update-wrappers:
+    desc: "Step 2: update the gradle wrappers in the repositories"
+    requires:
+      vars: [VERSION]
+    cmds:
+      - "{{.SCRIPTS}}/lp_change_gradle_distro.sh -v {{.VERSION}}"
+ 
+  push-to-launchpad:
+    desc: "Step 3: push the localized repos to the local git remote"
+    requires:
+      vars: [VERSION]
+    cmds:
+      - "{{.SCRIPTS}}/lp_push.sh -v {{.VERSION}}"
+
+  patch-spotless:
+    desc: "Step 3.5: patch the spotless plugin to avoid build failures"
+    requires:
+      vars: [VERSION]
+    cmds:
+      - "{{.SCRIPTS}}/lp_patch_spotless.sh --version {{.VERSION}}"
+ 
+  clone-opensearch-build:
+    desc: "Step 4: clone opensearch-build at the matching version"
+    requires:
+      vars: [LAST_VERSION, VERSION, USERNAME]
+    cmds:
+      - "{{.SCRIPTS}}/lp_clone_opensearch_build.sh --lp-user {{.USERNAME}} --last-version {{.LAST_VERSION}} --new-version {{.VERSION}}"
+ 
+  update-opensearch-build-manifests:
+    desc: "Step 5: rewrite manifest URLs from upstream to local mirror"
+    requires:
+      vars: [VERSION]
+    cmds:
+      - "{{.SCRIPTS}}/lp_update_manifests.sh --version {{.VERSION}}"

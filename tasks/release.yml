@@ -1,0 +1,28 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+ 
+version: '3'
+ 
+silent: true
+ 
+vars:
+  SCRIPTS: ../opensearch
+
+includes:
+  opensearch: tasks/opensearch.yml
+
+tasks:
+ 
+  release:
+    desc: "Full flow: clone+tag -> gradle wrappers -> push -> clone build -> localize manifests"
+    requires:
+      vars: [VERSION, USERNAME]
+    cmds:
+      - task: opensearch:clone
+      - task: opensearch:update-wrappers
+      - task: opensearch:push
+      - task: opensearch:patch-spotless
+      - task: opensearch:clone-opensearch-build
+      - task: opensearch:update-opensearch-build-manifests
+ 

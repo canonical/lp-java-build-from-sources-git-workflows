@@ -39,7 +39,34 @@ if [ -z "${LP_USERNAME}" ] || [ "${#VERSIONS[@]}" -eq 0 ]; then
 fi
 
 declare -a REPOS=(
+    OpenSearch
+    common-utils
+    opensearch-remote-metadata-sdk
+    opensearch-system-templates
+    job-scheduler
     k-NN
+    geospatial
+    security
+    cross-cluster-replication
+    ml-commons
+    neural-search
+    notifications
+    observability
+    reporting
+    sql
+    asynchronous-search
+    anomaly-detection
+    flow-framework
+    skills
+    alerting
+    security-analytics
+    index-management
+    performance-analyzer
+    custom-codecs
+    query-insights
+    opensearch-learning-to-rank-base
+    performance-analyzer-rca
+    opensearch-prometheus-exporter
 )
 LP_SOSS_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/soss/+source"
 LP_PUBLIC_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/~data-platform/opensearch-project-components/+git" # opensearch-project-components
@@ -135,6 +162,9 @@ done
 
 # performance analyzer RCA, and faiss and nmslib
 declare -a ALTERNATE_REPOS=(
+    https://github.com/facebookresearch/faiss.git
+    https://github.com/nmslib/nmslib.git
+    https://github.com/google/googletest.git
 )
 for repo in "${ALTERNATE_REPOS[@]}"; do
     echo "${repo}"
