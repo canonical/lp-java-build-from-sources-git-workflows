@@ -50,6 +50,7 @@ for dir in "$REPO_BASE"/*; do
     fi
 
     echo "Pushing branch '$BRANCH' and tag '$lp_tag' to launchpad..."
+    git fetch launchpad 2>/dev/null || true
     # git push -u launchpad "$BRANCH"
     # git push launchpad "$lp_tag" --force
 done
