@@ -31,5 +31,9 @@ for dir in "$REPO_BASE"/*; do
 
     lp_tag=$(git tag -l "${PREFIX}-v${VERSION}*" | head -1)
     [[ -n "$lp_tag" ]] || { echo "ERROR: no ${PREFIX}-v${VERSION}* tag found"; exit 1; }
-    git tag -f "$lp_tag" -m "$lp_tag"
+
+    # only retag if tag doesn't exist or points to wrong commit
+    if ! git rev-parse "$lp_tag^{}" >/dev/null 2>&1 || [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
+        git tag -f "$lp_tag" -m "$lp_tag"
+    fi
 done
