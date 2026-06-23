@@ -42,7 +42,7 @@ for dir in "$REPO_BASE"/*; do
     fi
 
     remote_head=$(git ls-remote launchpad "refs/heads/$BRANCH" 2>/dev/null | cut -f1)
-    remote_tag=$(git ls-remote launchpad "refs/tags/$lp_tag" 2>/dev/null | cut -f1)
+    remote_tag=$(git ls-remote launchpad "refs/tags/${lp_tag}^{}" 2>/dev/null | cut -f1)
 
     if [[ "$local_head" == "$remote_head" && "$local_tag" == "$remote_tag" ]]; then
         echo "Already up to date."
