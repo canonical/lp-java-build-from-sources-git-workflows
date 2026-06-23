@@ -25,8 +25,8 @@ fi
 
 git remote remove upstream 2>/dev/null || true
 git remote add upstream "$UPSTREAM"
-git fetch -q upstream --tags
-git fetch -q origin
+git fetch -q upstream --tags || { echo "ERROR: failed to fetch upstream tags"; exit 1; }
+git fetch -q origin || { echo "ERROR: failed to fetch origin"; exit 1; }
 
 if git rev-parse --verify "origin/$LAST_BRANCH" >/dev/null 2>&1; then
     git checkout -B "$LAST_BRANCH" "origin/$LAST_BRANCH"

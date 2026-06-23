@@ -16,7 +16,7 @@ fi
 # switch to product-specific branch
 if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
     git checkout -B "${PREFIX}-dashboards-${VERSION}"
-    git checkout "origin/lp-dashboards-${LAST_VERSION}" -- .launchpad.yaml
+    git checkout "origin/lp-dashboards-${LAST_VERSION}" -- .launchpad.yaml 2>/dev/null || { echo "ERROR: no lp-dashboards-${LAST_VERSION} branch found"; exit 1; }
 else
     git checkout -B "${PREFIX}-${VERSION}"
 fi

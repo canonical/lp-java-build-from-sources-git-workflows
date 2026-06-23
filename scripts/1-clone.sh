@@ -48,17 +48,17 @@ while read -r repo; do
         exit 1
     fi
 
-    git fetch -q origin --tags
+    git fetch -q origin --tags || { echo "ERROR: failed to fetch origin tags"; exit 1; }
 
     # performance-analyzer-rca doesn't use tags
     if [[ "$repo" == "performance-analyzer-rca" ]]; then
         case "$VERSION" in
             2*)
-                git fetch -q origin 2.x
+                git fetch -q origin 2.x || { echo "ERROR: failed to fetch origin 2.x"; exit 1; }
                 git checkout -B "${PREFIX}-${VERSION}" "origin/2.x"
                 ;;
             3*)
-                git fetch -q origin main
+                git fetch -q origin main || { echo "ERROR: failed to fetch origin main"; exit 1; }
                 git checkout -B "${PREFIX}-${VERSION}" "origin/main"
                 ;;
         esac
