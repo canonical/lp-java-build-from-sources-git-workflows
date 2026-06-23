@@ -68,6 +68,9 @@ sed -i.tmp \
 sed -i.tmp "/- name: OpenSearch$/,/ref:/s|ref: tags/${PREFIX}-v${VERSION}.0|ref: tags/${PREFIX}-v${VERSION}|" "$MANIFEST"
 sed -i.tmp "/- name: OpenSearch-Dashboards$/,/ref:/s|ref: tags/${PREFIX}-v${VERSION}.0|ref: tags/${PREFIX}-v${VERSION}|" "$MANIFEST"
 
+# lowercase launchpad urls
+awk '/git\.launchpad\.net/{$0=tolower($0)}1' "$MANIFEST" > "${MANIFEST}.tmp" && mv "${MANIFEST}.tmp" "$MANIFEST"
+
 rm -f "${MANIFEST}.tmp"
 
 # add prometheus-exporter
