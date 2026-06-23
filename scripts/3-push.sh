@@ -15,6 +15,12 @@ for dir in "$REPO_BASE"/*; do
     cd "$dir"
     repo=$(basename "$dir")
 
+    # check for uncommitted changes
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "ERROR: uncommitted changes in $repo"
+        exit 1
+    fi
+
     echo
     echo "$repo"
 

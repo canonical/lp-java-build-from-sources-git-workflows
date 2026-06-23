@@ -41,12 +41,27 @@ while read -r repo; do
     fi
 
     cd "$local_name"
+
+    # check for uncommitted changes
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "ERROR: uncommitted changes in $local_name"
+        exit 1
+    fi
+
     git fetch -q origin --tags
 
-    # performance-analyzer-rca uses 2.x branch, not tags
+    # performance-analyzer-rca doesn't use tags
     if [[ "$repo" == "performance-analyzer-rca" ]]; then
-        git fetch -q origin 2.x
-        git checkout -B "${PREFIX}-${VERSION}" "origin/2.x"
+        case "$VERSION" in
+            2*)
+                git fetch -q origin 2.x
+                git checkout -B "${PREFIX}-${VERSION}" "origin/2.x"
+                ;;
+            3*)
+                git fetch -q origin main
+                git checkout -B "${PREFIX}-${VERSION}" "origin/main"
+                ;;
+        esac
         version_tag="${VERSION}.0"
     else
         # get upstream tag for this version

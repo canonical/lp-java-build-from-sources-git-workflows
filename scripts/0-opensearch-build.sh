@@ -17,6 +17,12 @@ fi
 
 cd "$OPENSEARCH_BUILD_DIR"
 
+# check for uncommitted changes
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "ERROR: uncommitted changes in opensearch-build"
+    exit 1
+fi
+
 git remote remove upstream 2>/dev/null || true
 git remote add upstream "$UPSTREAM"
 git fetch -q upstream --tags

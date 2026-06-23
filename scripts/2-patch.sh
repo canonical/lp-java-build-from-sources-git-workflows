@@ -16,6 +16,12 @@ for dir in "$REPO_BASE"/*; do
     cd "$dir"
     repo=$(basename "$dir")
 
+    # check for uncommitted changes
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "ERROR: uncommitted changes in $repo"
+        exit 1
+    fi
+
     git checkout "$BRANCH" 2>/dev/null || { echo "ERROR: $repo has no $BRANCH branch"; exit 1; }
 
     echo
