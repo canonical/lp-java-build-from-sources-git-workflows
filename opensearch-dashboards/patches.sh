@@ -8,12 +8,12 @@ apply_patches() {
     case "$repo" in
         opensearch-dashboards)
             case "$VERSION" in
-                2*) git am "$PATCHES_DIR/opensearch-dashboards-2.x.patch" ;;
-                *)  git am "$PATCHES_DIR/opensearch-dashboards-3.x.patch" ;;
+                2*) git am --3way "$PATCHES_DIR/opensearch-dashboards-2.x.patch" ;;
+                *)  git am --3way "$PATCHES_DIR/opensearch-dashboards-3.x.patch" ;;
             esac
             ;;
         dashboards-reporting)
-            git am "$PATCHES_DIR/dashboards-reporting.patch"
+            git am --3way "$PATCHES_DIR/dashboards-reporting.patch"
             ;;
     esac
 
