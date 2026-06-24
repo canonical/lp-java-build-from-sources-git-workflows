@@ -1,105 +1,86 @@
 #!/usr/bin/env bash
-set -eux
+set -eu
 
-usage() {
-    echo "Usage: $0 --version <version>"
-    echo "  e.g. $0 --version 2.19.5"
-    exit 1
-}
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-VERSION=""
+cd "${ROOT_DIR}/opensearch-build"
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --version)
-            VERSION="$2"
-            shift 2
-            ;;
-        -h|--help)
-            usage
-            ;;
-        *)
-            echo "Unknown argument: $1"
-            usage
-            ;;
-    esac
-done
-
-if [[ -z "$VERSION" ]]; then
-    echo "--version is required"
-    usage
-fi
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_BASE="${SCRIPT_DIR}/opensearch-repos"
-
-PREFIX="${PREFIX:-lp}"
-PATCH_NUMBER="${PATCH_NUMBER:-0}"
-LP_VERSION_TAG="${PREFIX}-v${VERSION}"
-LP_VERSION_TAG_DOTTED="${PREFIX}-v${VERSION}.0"
-MANIFEST="${REPO_BASE}/opensearch-build/manifests/${VERSION}/opensearch-${VERSION}.yml"
-
-if [ ! -f "$MANIFEST" ]; then
-    echo "manifest not found at $MANIFEST"
+# check for uncommitted changes
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "ERROR: uncommitted changes in opensearch-build"
     exit 1
 fi
 
-cd "${REPO_BASE}/opensearch-build"
+# use separate branches for opensearch and dashbaords
+if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
+    git checkout -B "${PREFIX}-dashboards-${VERSION}"
+else
+    git checkout -B "${PREFIX}-${VERSION}"
+fi
 
-awk '/repository:/ { print tolower($0); next } { print }' "$MANIFEST" >tmp && mv tmp "$MANIFEST"
+cd "${ROOT_DIR}"
 
-# replace urs with launchpad
-sed -i -E 's|https://github\.com/opensearch-project/([^[:space:]/]+)\.git|https://git.launchpad.net/~data-platform/opensearch-project-components/+git/opensearch-\1|g' "$MANIFEST"
+MANIFEST="${ROOT_DIR}/opensearch-build/manifests/${VERSION}/${PRODUCT}-${VERSION}.yml"
 
-# fix double prefix for openseasrch repo
-sed -i 's|opensearch-opensearch|opensearch|g' "$MANIFEST"
+if [[ "$PRODUCT" == "opensearch" ]]; then
+    LP_URL="https://git.launchpad.net/~data-platform/opensearch-project-components/+git"
+else
+    LP_URL="https://git.launchpad.net/~data-platform/opensearch-project-dashboards-components/+git"
+fi
 
-# replace tags (some tagged manifests use a hash instead of "tags/" for some reason)
-sed -i -E "s/ref: [a-f0-9]{40}/ref: tags\/${LP_VERSION_TAG_DOTTED}/g" "$MANIFEST"
-sed -i "s|ref: tags/${VERSION}.0|ref: tags/${LP_VERSION_TAG_DOTTED}|g" "$MANIFEST"
-sed -i "s|ref: tags/${VERSION}|ref: tags/${LP_VERSION_TAG}|g" "$MANIFEST"
+# remove functional test component
+sed -i.tmp '/- name:.*[Ff]unctionalTest/,/^  - name:/{
+    /- name:.*[Ff]unctionalTest/d
+    /^  - name:/!d
+}' "$MANIFEST"
+
+# replace upstream urls with launchpad's
+if [[ "$PRODUCT" == "opensearch" ]]; then
+    sed -i.tmp \
+        -e "s|https://github\.com/opensearch-project/\([^[:space:]/]*\)\.git|${LP_URL}/opensearch-\1|g" \
+        "$MANIFEST"
+    # fix double opensearch- prefix and lowercase
+    sed -i.tmp \
+        -e "s|/opensearch-OpenSearch$|/opensearch|" \
+        -e "s|/opensearch-opensearch-|/opensearch-|g" \
+        "$MANIFEST"
+else
+    sed -i.tmp \
+        -e "s|https://github\.com/opensearch-project/\([^[:space:]/]*\)\.git|${LP_URL}/\1|g" \
+        "$MANIFEST"
+    sed -i.tmp \
+        -e "s|/OpenSearch-Dashboards$|/opensearch-dashboards|" \
+        "$MANIFEST"
+fi
+
+# replace refs
+sed -i.tmp \
+    -e "s/ref: [a-f0-9]\{40\}/ref: tags\/${PREFIX}-v${VERSION}.0/g" \
+    -e "s|ref: tags/${VERSION}.0|ref: tags/${PREFIX}-v${VERSION}.0|g" \
+    -e "s|ref: tags/${VERSION}|ref: tags/${PREFIX}-v${VERSION}|g" \
+    "$MANIFEST"
 
 # set non-dotted tag for opensearch (this matches upstream but we've done it both ways, check policy)
-sed -i -E "/- name: OpenSearch$/,/ref:/{s|ref: tags/${LP_VERSION_TAG_DOTTED}|ref: tags/${LP_VERSION_TAG}|}" "$MANIFEST"
+sed -i.tmp "/- name: OpenSearch$/,/ref:/s|ref: tags/${PREFIX}-v${VERSION}.0|ref: tags/${PREFIX}-v${VERSION}|" "$MANIFEST"
+sed -i.tmp "/- name: OpenSearch-Dashboards$/,/ref:/s|ref: tags/${PREFIX}-v${VERSION}.0|ref: tags/${PREFIX}-v${VERSION}|" "$MANIFEST"
+
+# lowercase launchpad urls
+awk '/git\.launchpad\.net/{$0=tolower($0)}1' "$MANIFEST" > "${MANIFEST}.tmp" && mv "${MANIFEST}.tmp" "$MANIFEST"
+
+rm -f "${MANIFEST}.tmp"
 
 # add prometheus-exporter
-if ! grep -q "prometheus-exporter" "$MANIFEST"; then
-    cat >>"$MANIFEST" <<EOF
+if [[ "$PRODUCT" == "opensearch" ]] && ! grep -q "prometheus-exporter" "$MANIFEST"; then
+    cat >> "$MANIFEST" << EOF
   - name: prometheus-exporter
-    repository: https://git.launchpad.net/~data-platform/opensearch-project-components/+git/opensearch-prometheus-exporter-plugin-for-opensearch
-    ref: tags/${LP_VERSION_TAG_DOTTED}
+    repository: ${LP_URL}/opensearch-prometheus-exporter
+    ref: tags/${PREFIX}-v${VERSION}.0
     platforms:
       - linux
       - windows
 EOF
 fi
 
-# validate yaml
-if python3 -c "import yaml; yaml.safe_load(open('$MANIFEST'))" 2>/dev/null; then
-    echo ""
-else
-    echo "fix manifest yaml file"
-    exit 1
-fi
-
-awk '
-      /- name:/ { name = $3 }
-      /repository:/ { repo = $2 }
-      /ref:/ {
-          ref = $2
-          print name
-          print "  repo:", repo
-          print "  ref: ", ref
-          print ""
-      }
-  ' "$MANIFEST"
-
-STAGING_URL="https://canonical.jfrog.io/artifactory/dataplatform-opensearch-staging"
-
-sed -i \
-    -e "s/^\(\s*OPENSEARCH_VERSION:\).*/\1 ${VERSION}/" \
-    -e "s/^\(\s*PATCH_NUMBER:\).*/\1 ${PATCH_NUMBER}/" \
-    -e "s|^\(\s*ARTIFACTORY_URL:\).*|\1 \"${STAGING_URL}\"|" .launchpad.yaml
-
-echo "check contents of .launchpad.yaml"
-cd ${SCRIPT_DIR}
+cd "${ROOT_DIR}/opensearch-build"
+git add "$MANIFEST"
+git diff --cached --quiet || git commit -m "Update manifest for ${PRODUCT} ${VERSION}"

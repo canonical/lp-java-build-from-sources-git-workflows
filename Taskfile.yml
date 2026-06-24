@@ -20,16 +20,19 @@ silent: true
 vars:
   SCRIPTS: ./opensearch
 
+ 
 includes:
   opensearch: tasks/opensearch.yml
- 
+  opensearch-dashboards: tasks/opensearch-dashboards.yml
+  common: tasks/common.yml
+
 tasks:
   default:
     desc: List available steps
     cmds:
       - task --list
- 
-  release:
+
+  release-opensearch:
     desc: "Full flow: clone+tag -> gradle wrappers -> push -> clone build -> localize manifests"
     requires:
       vars: [VERSION, USERNAME]
@@ -40,4 +43,45 @@ tasks:
       - task: opensearch:patch-spotless
       - task: opensearch:clone-opensearch-build
       - task: opensearch:update-opensearch-build-manifests
+
+  release-opensearch-dashboards:
+    desc: "Full flow: clone+tag -> gradle wrappers -> push -> clone build -> localize manifests"
+    requires:
+      vars: [VERSION, LP_USERNAME, PREFIX, JFROG_URL, LAST_VERSION]
+    cmds:
+      - task: common:parse-manifest
+        vars:
+          PRODUCT: opensearch-dashboards
+          VERSION: '{{.VERSION}}'
+      - task: common:clone
+        vars:
+          PRODUCT: opensearch-dashboards
+          VERSION: '{{.VERSION}}'
+          PREFIX: '{{.PREFIX}}'
+          LP_USERNAME: '{{.LP_USERNAME}}'
+      - task: opensearch-dashboards:patches
+        vars:
+          VERSION: '{{.VERSION}}'
+          PREFIX: '{{.PREFIX}}'
+          JFROG_URL: '{{.JFROG_URL}}'
+
+      - task: common:clone-opensearch-build
+        vars:
+          VERSION: '{{.VERSION}}'
+          PREFIX: '{{.PREFIX}}'
+          LP_USERNAME: '{{.LP_USERNAME}}'
+          LAST_VERSION: '{{.LAST_VERSION}}'
+      - task: common:update-manifests-opensearch-build
+        vars:
+          VERSION: '{{.VERSION}}'
+          PREFIX: '{{.PREFIX}}'
+          PRODUCT: opensearch-dashboards
+      - task: common:update-launchpad
+        vars:
+          VERSION: '{{.VERSION}}'
+          PREFIX: '{{.PREFIX}}'
+          LAST_VERSION: '{{.LAST_VERSION}}'
+          PRODUCT: opensearch-dashboards
+      
+ 
  

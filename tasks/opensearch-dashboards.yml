@@ -1,0 +1,97 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+version: '3'
+ 
+silent: true
+ 
+vars:
+  SCRIPTS: ./opensearch
+  PATCHES_DIR: ./diffs
+
+includes:
+  common: common.yml
+ 
+tasks:
+
+  patches:
+    internal: true
+    desc: "Patch opensearch-dashboards repositories to use the correct JFrog URL" 
+    requires:
+      vars: [JFROG_URL, PREFIX, VERSION]
+    vars:
+      REPO_LIST:
+        sh: find ./opensearch/opensearch-dashboards-repos -mindepth 1 -maxdepth 1 -type d -exec basename {} \;
+    cmds:
+      - for: { var: REPO_LIST, split: "\n" }
+        task: patch-repo
+        vars:
+          REPO_NAME: '{{.ITEM}}'
+          PREFIX: '{{.PREFIX}}'
+          VERSION: '{{.VERSION}}'
+          JFROG_URL: '{{.JFROG_URL}}'
+
+
+  patch-repo:
+    internal: true
+    desc: "Patch a single opensearch-dashboards repository"
+    dir: ./opensearch/opensearch-dashboards-repos/{{.REPO_NAME}}
+    requires:
+      vars: [REPO_NAME, PREFIX, VERSION]
+    cmds:
+      - task: patch-dashboards-reporting
+        vars:
+          REPO_NAME: '{{.REPO_NAME}}'
+          PREFIX: '{{.PREFIX}}'
+          VERSION: '{{.VERSION}}'
+      - task: patch-opensearch-dashboards
+        vars:
+          REPO_NAME: '{{.REPO_NAME}}'
+          PREFIX: '{{.PREFIX}}'
+          VERSION: '{{.VERSION}}'
+      - task: common:update-tag
+        vars:
+          PRODUCT: opensearch-dashboards
+          REPO_NAME: '{{.REPO_NAME}}'
+          VERSION: '{{.VERSION}}'
+          PREFIX: '{{.PREFIX}}'
+      - task: common:push-to-launchpad
+        vars:
+          BRANCH: '{{.PREFIX}}-{{.VERSION}}'
+          VERSION: '{{.VERSION}}'
+          PREFIX: '{{.PREFIX}}'
+          PRODUCT: opensearch-dashboards
+          REPO_NAME: '{{.REPO_NAME}}'
+
+  patch-dashboards-reporting:
+    internal: true
+    desc: "Patch opensearch-dashboards-reporting repository" 
+    dir: ./opensearch/opensearch-dashboards-repos/{{.REPO_NAME}}
+    requires:
+      vars: [PREFIX, VERSION, REPO_NAME]
+    cmds:
+      - |
+        # If repo name equals dashboards-reporting, patch the repo, else skip
+        if [ "{{.REPO_NAME}}" = "dashboards-reporting" ]; then
+          git am --3way "../../../{{.PATCHES_DIR}}/dashboards-reporting.patch"
+        fi
+
+  patch-opensearch-dashboards:
+    internal: true
+    desc: "Patch opensearch-dashboards repository" 
+    dir: ./opensearch/opensearch-dashboards-repos/{{.REPO_NAME}}
+    requires:
+      vars: [PREFIX, VERSION, REPO_NAME]
+    cmds:
+      - |
+        # If repo name equals opensearch-dashboards, patch the repo, else skip
+        if [ "{{.REPO_NAME}}" = "opensearch-dashboards" ]; then
+          # if version is 2.x then apply patch v2.x else v3.x
+          if [[ "{{.VERSION}}" == 2.* ]]; then
+            git am --3way "../../../{{.PATCHES_DIR}}/opensearch-dashboards-v2.x.patch"
+          else
+            git am --3way "../../../{{.PATCHES_DIR}}/opensearch-dashboards-v3.x.patch"
+          fi
+        fi
+
+  

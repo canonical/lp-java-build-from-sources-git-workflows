@@ -1,0 +1,163 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+version: '3'
+ 
+silent: true
+ 
+vars:
+  SCRIPTS: ./opensearch
+  FUNCTIONS: ./functions
+ 
+tasks:
+  parse-manifest:
+    internal: true
+    desc: "Parse the build manifest and generate a list of repos to clone"
+    requires:
+      vars: [VERSION, PRODUCT] 
+    cmds:
+      - "{{.SCRIPTS}}/parse_manifests.py"
+    env:
+      VERSION: '{{.VERSION}}'
+      PRODUCT: '{{.PRODUCT}}'
+
+  clone:
+    internal: true
+    desc: |
+      "Step 1: clone all repos + plugins and configure the tag locally."
+    requires:
+      vars: [VERSION, PREFIX, PRODUCT, LP_USERNAME]
+    cmds:
+      - "{{.SCRIPTS}}/lp_clone_all.sh"
+    env:
+      VERSION: '{{.VERSION}}'
+      PREFIX: '{{.PREFIX}}'
+      PRODUCT: '{{.PRODUCT}}'
+      LP_USERNAME: '{{.LP_USERNAME}}'
+
+  clean-repos:
+    desc: "Clean all repos cloned in the ./opensearch/opensearch-repos directory"
+    requires:
+      vars: [PRODUCT]
+    cmds:
+      - "rm -rf ./opensearch/{{.PRODUCT}}-repos/*"
+
+
+  update-tag:
+    desc: "Find and update the git tag to match the current commit if necessary"
+    deps:
+      - task: check-uncommitted-changes
+        vars:
+          REPO_NAME: '{{.REPO_NAME}}'
+          PRODUCT: '{{.PRODUCT}}'
+      - task: check-branch
+        vars:
+          REPO_NAME: '{{.REPO_NAME}}'
+          BRANCH: '{{.PREFIX}}-{{.VERSION}}'
+          PRODUCT: '{{.PRODUCT}}'
+    internal: true
+    dir: './opensearch/{{.PRODUCT}}-repos/{{.REPO_NAME}}'
+    requires:
+      vars: [REPO_NAME, PREFIX, VERSION, PRODUCT]
+    cmds:
+      - |
+        lp_tag=$(git tag -l "{{.PREFIX}}-v{{.VERSION}}*" | head -1)
+        
+        if [ -z "$lp_tag" ]; then
+          echo "ERROR: no {{.PREFIX}}-v{{.VERSION}}* tag found in {{.REPO_NAME}}"
+          exit 1
+        fi
+        
+        # Only retag if tag doesn't exist or points to wrong commit
+        if ! git rev-parse "$lp_tag^{}" >/dev/null 2>&1 || [ "$(git rev-parse "$lp_tag^{}")" != "$(git rev-parse HEAD)" ]; then
+            git tag -f "$lp_tag" -m "$lp_tag"
+            echo "Successfully updated tag $lp_tag in {{.REPO_NAME}}"
+        else
+            echo "Tag $lp_tag already points to HEAD in {{.REPO_NAME}}"
+        fi
+
+  push-to-launchpad:
+    internal: true
+    desc: "Push the localized repos to the local git remote"
+    dir: './opensearch/{{.PRODUCT}}-repos/{{.REPO_NAME}}'
+    requires:
+      vars: [BRANCH, PREFIX, VERSION, REPO_NAME, PRODUCT]
+    cmds:
+      - |
+        source ../../../{{.FUNCTIONS}}/push.sh
+        push_to_launchpad
+    env:
+      BRANCH: '{{.BRANCH}}'
+      PREFIX: '{{.PREFIX}}'
+      VERSION: '{{.VERSION}}'
+
+
+  
+
+  check-uncommitted-changes:
+    internal: true
+    dir: './opensearch/{{.PRODUCT}}-repos/{{.REPO_NAME}}'
+    requires:
+      vars: [REPO_NAME, PRODUCT]
+    cmds:
+      - 'echo "Checking for uncommitted changes in {{.REPO_NAME}}"'
+      # If this fails, it exits with an error and stops the parent task
+      - |
+        if ! git diff --quiet || ! git diff --cached --quiet; then
+          echo "ERROR: uncommitted changes in {{.REPO_NAME}}"
+          exit 1
+        fi
+
+  check-branch:
+    internal: true
+    dir: './opensearch/{{.PRODUCT}}-repos/{{.REPO_NAME}}'
+    requires:
+      vars: [BRANCH, PRODUCT]
+    cmds:
+      - 'echo "Checking branch {{.BRANCH}} in {{.REPO_NAME}}"'
+      # If this fails, it exits with an error and stops the parent task
+      - |
+        if ! git checkout "{{.BRANCH}}" 2>/dev/null; then
+          echo "ERROR: {{.REPO_NAME}} has no {{.BRANCH}} branch"
+          exit 1
+        fi
+
+  clone-opensearch-build:
+    desc: "Step 4: clone the opensearch-build repository and configure the tag locally."
+    requires:
+      vars: [VERSION, PREFIX, LP_USERNAME, LAST_VERSION]
+    cmds:
+      - "{{.SCRIPTS}}/lp_clone_opensearch_build.sh"
+    env:
+      VERSION: '{{.VERSION}}'
+      PREFIX: '{{.PREFIX}}'
+      LP_USERNAME: '{{.LP_USERNAME}}'
+      LAST_VERSION: '{{.LAST_VERSION}}'
+
+  update-manifests-opensearch-build:
+    desc: "Step 5: update the manifests in the opensearch-build repository to point to the new version."
+    requires:
+      vars: [VERSION, PREFIX, PRODUCT]
+    cmds:
+      - "{{.SCRIPTS}}/lp_update_manifests.sh"
+    env:
+      VERSION: '{{.VERSION}}'
+      PREFIX: '{{.PREFIX}}'
+      PRODUCT: '{{.PRODUCT}}'
+
+  update-launchpad:
+    desc: "Step 6: update the launchpad repository to point to the new version."
+    requires:
+      vars: [VERSION, PREFIX, LAST_VERSION, PRODUCT]
+    cmds:
+      - "{{.SCRIPTS}}/lp_update_launchpad_yaml.sh"
+    env:
+      PRODUCT: '{{.PRODUCT}}'
+      VERSION: '{{.VERSION}}'
+      PREFIX: '{{.PREFIX}}'
+      LAST_VERSION: '{{.LAST_VERSION}}'
+
+
+
+
+  

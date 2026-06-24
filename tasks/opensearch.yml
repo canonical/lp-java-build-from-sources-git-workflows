@@ -9,6 +9,66 @@ vars:
   SCRIPTS: ./opensearch
  
 tasks:
+
+  patch-gradle:
+    internal: true
+    desc: "Patch gradle wrapper scripts to use the correct JFrog URL"
+    dir: './opensearch/{{.PRODUCT}}-repos/{{.REPO}}'
+    requires:
+      vars: [PRODUCT, REPO, JFROG_URL, BRANCH]
+    deps:
+      - task: check-uncommitted-changes
+        vars:
+          REPO_NAME: '{{.REPO}}'
+          PRODUCT: '{{.PRODUCT}}'
+      - task: check-branch
+        vars:
+          REPO_NAME: '{{.REPO}}'
+          BRANCH: '{{.BRANCH}}'
+          PRODUCT: '{{.PRODUCT}}'
+    cmds:
+      - |
+        # import functions from the functions directory
+        source ../../../{{.FUNCTIONS}}/patches.sh
+
+        patch_gradle
+        echo "Done"
+    env:
+      JFROG_URL: '{{.JFROG_URL}}'
+
+
+  patches:
+    internal: true
+    desc: "Patch opensearch repositories to use the correct JFrog URL" 
+    requires:
+      vars: [JFROG_URL, PREFIX, VERSION]
+    vars:
+      REPO_LIST:
+        sh: find ./opensearch/opensearch-repos -mindepth 1 -maxdepth 1 -type d -exec basename {} \;
+    cmds:
+      - for: { var: REPO_LIST, split: "\n" }
+        task: patch-repo
+        vars:
+          REPO_NAME: '{{.ITEM}}'
+          PREFIX: '{{.PREFIX}}'
+          VERSION: '{{.VERSION}}'
+          JFROG_URL: '{{.JFROG_URL}}'
+
+  patch-repo:
+    internal: true
+    desc: "Patch a single opensearch repository"
+    dir: ./opensearch/opensearch-repos/{{.REPO_NAME}}
+    requires:
+      vars: [JFROG_URL, REPO_NAME, PREFIX, VERSION]
+    cmds:
+      - 'echo "Patching {{.REPO_NAME}}"'
+      - task: patch-gradle
+        vars:
+          PRODUCT: opensearch
+          REPO: '{{.REPO_NAME}}'
+          JFROG_URL: '{{.JFROG_URL}}'
+          BRANCH: '{{.PREFIX}}-{{.VERSION}}'
+ 
   
   clone:
     desc: |

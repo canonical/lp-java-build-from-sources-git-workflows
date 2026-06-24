@@ -1,71 +1,53 @@
 #!/usr/bin/env bash
 set -eux
 
-usage() {
-    echo "Usage: $0 --lp-user <user> --last-version <version> --new-version <version>"
-    echo "  e.g. $0 --lp-user jdoe --last-version 2.19.4 --new-version 2.19.5"
+
+# Make sure $LAST_VERSION, $VERSION, $PREFIX, $LP_USERNAME are set in the environment before running this script
+if [[ -z "${LAST_VERSION}" || -z "${VERSION}" || -z "${PREFIX}" || -z "${LP_USERNAME}" ]]; then
+    echo "ERROR: LAST_VERSION, VERSION, PREFIX, and LP_USERNAME must be set in the environment"
     exit 1
-}
-
-LP_USER=""
-LAST_VERSION=""
-NEW_VERSION=""
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --lp-user)
-            LP_USER="$2"
-            shift 2
-            ;;
-        --last-version)
-            LAST_VERSION="$2"
-            shift 2
-            ;;
-        --new-version)
-            NEW_VERSION="$2"
-            shift 2
-            ;;
-        -h|--help)
-            usage
-            ;;
-        *)
-            echo "Unknown argument: $1"
-            usage
-            ;;
-    esac
-done
-
-if [[ -z "$LP_USER" || -z "$LAST_VERSION" || -z "$NEW_VERSION" ]]; then
-    echo "--lp-user, --last-version and --new-version are all required"
-    usage
 fi
 
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_BASE="${SCRIPT_DIR}/opensearch-repos"
+LP_SOSS_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/soss/+source"
 
-PREFIX="${PREFIX:-lp}"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+OPENSEARCH_BUILD_DIR="${ROOT_DIR}/opensearch-build"
+LAST_BRANCH="lp-${LAST_VERSION}"
+BRANCH="${PREFIX}-${VERSION}"
+LP_BUILD_REMOTE="${LP_SOSS_REMOTE}/opensearch-build"
+UPSTREAM="https://github.com/opensearch-project/opensearch-build.git"
 
-LP_REPO="git+ssh://${LP_USER}@git.launchpad.net/soss/+source/opensearch-build"
-UPSTREAM_REPO="https://github.com/opensearch-project/opensearch-build.git"
 
-mkdir -p "$REPO_BASE"
-cd "$REPO_BASE"
+if [[ ! -d "$OPENSEARCH_BUILD_DIR" ]]; then
+    echo "Cloning into 'opensearch-build'..."
+    git clone -q "$LP_BUILD_REMOTE" "$OPENSEARCH_BUILD_DIR"
+fi
 
-if [ -d "opensearch-build" ]; then
-    cd opensearch-build
-else
-    git clone "$LP_REPO" opensearch-build
-    cd opensearch-build
+cd "$OPENSEARCH_BUILD_DIR"
+
+# check for uncommitted changes
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "ERROR: uncommitted changes in opensearch-build"
+    exit 1
 fi
 
 git remote remove upstream 2>/dev/null || true
-git remote add upstream "$UPSTREAM_REPO"
-git fetch upstream --tags
+git remote add upstream "$UPSTREAM"
+git fetch -q upstream --tags || { echo "ERROR: failed to fetch upstream tags"; exit 1; }
+git fetch -q origin || { echo "ERROR: failed to fetch origin"; exit 1; }
 
-git checkout "lp-${LAST_VERSION}"
-git checkout -B "${PREFIX}-${NEW_VERSION}"
-
-echo "merging upstream ${NEW_VERSION} tag..."
-# merge upstream tag (there might be conflicts)
-git merge "${NEW_VERSION}" --no-edit 
+if git rev-parse --verify "origin/$LAST_BRANCH" >/dev/null 2>&1; then
+    git checkout -B "$LAST_BRANCH" "origin/$LAST_BRANCH"
+    git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH"
+    if ! git merge-base --is-ancestor "${VERSION}" HEAD; then
+        git merge "${VERSION}" --no-edit
+        echo "on branch $BRANCH, merged upstream ${VERSION}"
+    else
+        echo "on branch $BRANCH, upstream ${VERSION} already merged"
+    fi
+else
+    echo "no $LAST_BRANCH branch found, creating $BRANCH from upstream tag"
+    git checkout -B "$BRANCH" "${VERSION}"
+    echo "on branch $BRANCH, based on upstream ${VERSION}"
+fi

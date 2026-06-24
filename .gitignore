@@ -2,3 +2,5 @@
 
 .env
 opensearch-repos
+opensearch-dashboards-repos
+opensearch-build
