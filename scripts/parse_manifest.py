@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
-import subprocess
 import sys
+import urllib.request
 import yaml
 from pathlib import Path
 
@@ -9,22 +9,14 @@ PRODUCT = sys.argv[1]
 VERSION = os.environ["VERSION"]
 
 ROOT_DIR = Path(__file__).parent.parent
-OPENSEARCH_BUILD_DIR = ROOT_DIR / "opensearch-build"
 PRODUCT_DIR = ROOT_DIR / PRODUCT
 MANIFEST_NAME = f"{PRODUCT}-{VERSION}.yml"
-MANIFEST_REF = f"manifests/{VERSION}/{MANIFEST_NAME}"
 
 OUTPUT_PATH = PRODUCT_DIR / "repos.txt"
 
-# get manifest from upstream tag, in case local manifests already changed
-result = subprocess.run(
-    ["git", "show", f"{VERSION}:{MANIFEST_REF}"],
-    cwd=OPENSEARCH_BUILD_DIR,
-    capture_output=True,
-    text=True,
-    check=True,
-)
-manifest = yaml.safe_load(result.stdout)
+manifest_url = f"https://raw.githubusercontent.com/opensearch-project/opensearch-build/{VERSION}/manifests/{VERSION}/{MANIFEST_NAME}"
+with urllib.request.urlopen(manifest_url) as response:
+    manifest = yaml.safe_load(response.read())
 
 repos = set()
 
