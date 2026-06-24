@@ -32,11 +32,9 @@ for component in manifest.get("components", []):
     repos.add(repo_name)
 
 if PRODUCT == "opensearch":
-    if "opensearch-prometheus-exporter" not in repos:
-        repos.add("opensearch-prometheus-exporter")
-
-    if VERSION.startswith("2."):
-        repos.add("performance-analyzer-rca")
+    for missing in ("opensearch-prometheus-exporter", "performance-analyzer-rca"):
+        if missing not in repos:
+            repos.add(missing)
 
 with open(OUTPUT_PATH, "w") as f:
     f.write("\n".join(sorted(repos)) + "\n")
