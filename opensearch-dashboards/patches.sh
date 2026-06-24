@@ -5,6 +5,8 @@ PATCHES_DIR="${PRODUCT_DIR}/patches"
 apply_patches() {
     local repo="$1"
 
+    git am --abort 2>/dev/null || true
+
     case "$repo" in
         opensearch-dashboards)
             case "$VERSION" in
