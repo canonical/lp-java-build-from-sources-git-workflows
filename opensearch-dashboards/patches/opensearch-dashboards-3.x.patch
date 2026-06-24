@@ -1,46 +1,41 @@
-From 624a776ca4aa6e513bc465ff36b7cb8a4a438bea Mon Sep 17 00:00:00 2001
+From ebfab48092ff9bc3cd0cfe9c5be6ea5bc748baed Mon Sep 17 00:00:00 2001
 From: smethnani <82812166+smethnani@users.noreply.github.com>
-Date: Fri, 25 Jul 2025 13:10:24 +0000
-Subject: [PATCH 1/2] Download node from artifactory
+Date: Wed, 24 Jun 2026 14:21:46 +0400
+Subject: [PATCH] Download node from artifactory
 
 ---
- src/dev/build/lib/download.ts                 | 11 +++++-
+ src/dev/build/lib/download.ts                 |  6 ++++
  src/dev/build/lib/extraLaunchpadOptions.ts    | 34 +++++++++++++++++++
  src/dev/build/lib/index.ts                    |  1 +
  .../build/tasks/nodejs/node_download_info.ts  |  7 ++--
  src/dev/build/tasks/nodejs/node_shasums.ts    |  6 ++--
- 5 files changed, 53 insertions(+), 6 deletions(-)
+ 5 files changed, 50 insertions(+), 4 deletions(-)
  create mode 100644 src/dev/build/lib/extraLaunchpadOptions.ts
 
 diff --git a/src/dev/build/lib/download.ts b/src/dev/build/lib/download.ts
-index 65fd54583c..3487d759ac 100644
+index 65fd54583c..ded48eca93 100644
 --- a/src/dev/build/lib/download.ts
 +++ b/src/dev/build/lib/download.ts
-@@ -36,7 +36,12 @@ import { createHash } from 'crypto';
- import Axios from 'axios';
+@@ -37,6 +37,7 @@ import Axios from 'axios';
  import { ToolingLog } from '@osd/dev-utils';
  
-+// https://github.com/axios/axios/tree/ffea03453f77a8176c51554d5f6c3c6829294649/lib/adapters
-+// @ts-expect-error untyped internal module used to prevent axios from using xhr adapter in tests
-+import AxiosHttpAdapter from 'axios/lib/adapters/http';
-+
  import { mkdirp } from './fs';
 +import { extraLaunchpadOptions } from './extraLaunchpadOptions';
  
  function tryUnlink(path: string) {
    try {
-@@ -70,10 +75,14 @@ export async function download(options: DownloadOptions): Promise<void> {
+@@ -70,10 +71,15 @@ export async function download(options: DownloadOptions): Promise<void> {
    try {
      log.debug(`Attempting download of ${url}`, chalk.dim(sha256));
  
 +    const extraOptions = url.startsWith('https://canonical.jfrog.io')
 +      ? extraLaunchpadOptions()
 +      : {};
++
      const response = await Axios.request({
        url,
        responseType: 'stream',
--      adapter: 'http',
-+      adapter: AxiosHttpAdapter,
+       adapter: 'http',
 +      ...extraOptions,
      });
  
@@ -95,20 +90,20 @@ index 5395fb0056..81c734c6e3 100644
  export * from './scan';
 +export * from './extraLaunchpadOptions';
 diff --git a/src/dev/build/tasks/nodejs/node_download_info.ts b/src/dev/build/tasks/nodejs/node_download_info.ts
-index d0fefe72e7..3836e59e6b 100644
+index 8969333e3f..7ecb9db423 100644
 --- a/src/dev/build/tasks/nodejs/node_download_info.ts
 +++ b/src/dev/build/tasks/nodejs/node_download_info.ts
-@@ -38,6 +38,9 @@ const NODE_RANGE_CACHE: { [key: string]: string } = {};
+@@ -35,6 +35,9 @@ import semver from 'semver';
  
- export const NODE14_FALLBACK_VERSION = '14.21.3';
+ import { Config, Platform } from '../../lib';
  
 +const ARTIFACTORY_URL =
 +  'https://canonical.jfrog.io/artifactory/dataplatform-generic-stable-local/node';
 +
- export async function getNodeDownloadInfo(config: Config, platform: Platform) {
-   const version = getRequiredVersion(config);
-   const arch = platform.getNodeArch();
-@@ -46,7 +49,7 @@ export async function getNodeDownloadInfo(config: Config, platform: Platform) {
+ const NODE_RANGE_CACHE: { [key: string]: string } = {};
+ 
+ export const NODE14_FALLBACK_VERSION = '14.21.3';
+@@ -47,7 +50,7 @@ export async function getNodeDownloadInfo(config: Config, platform: Platform) {
      ? `node-v${version}-win-x64.zip`
      : `node-v${version}-${arch}.tar.gz`;
  
@@ -117,7 +112,7 @@ index d0fefe72e7..3836e59e6b 100644
    const downloadPath = config.resolveFromRepo('.node_binaries', version, basename(downloadName));
    const extractDir = config.resolveFromRepo('.node_binaries', version, arch);
  
-@@ -69,7 +72,7 @@ export async function getNodeVersionDownloadInfo(
+@@ -70,7 +73,7 @@ export async function getNodeVersionDownloadInfo(
      ? `node-v${version}-win-x64.zip`
      : `node-v${version}-${architecture}.tar.gz`;
  
@@ -127,66 +122,26 @@ index d0fefe72e7..3836e59e6b 100644
    const extractDir = resolve(repoRoot, '.node_binaries', version, architecture);
  
 diff --git a/src/dev/build/tasks/nodejs/node_shasums.ts b/src/dev/build/tasks/nodejs/node_shasums.ts
-index bb4c206aff..fe46613842 100644
+index bb4c206aff..afdd0c905a 100644
 --- a/src/dev/build/tasks/nodejs/node_shasums.ts
 +++ b/src/dev/build/tasks/nodejs/node_shasums.ts
-@@ -31,12 +31,12 @@
+@@ -31,12 +31,14 @@
  import axios from 'axios';
  import { ToolingLog } from '@osd/dev-utils';
  
 +import { extraLaunchpadOptions } from '../../lib';
++
  export async function getNodeShasums(log: ToolingLog, nodeVersion: string) {
 -  const url = `https://nodejs.org/dist/v${nodeVersion}/SHASUMS256.txt`;
 +  const url = `https://canonical.jfrog.io/artifactory/dataplatform-generic-stable-local/node/v${nodeVersion}/SHASUMS256.txt`;
  
    log.debug('Downloading shasum values for node version', nodeVersion, 'from', url);
--
+ 
 -  const { status, data } = await axios.get(url);
 +  const { status, data } = await axios.get(url, extraLaunchpadOptions());
  
    if (status !== 200) {
      throw new Error(`${url} failed with a ${status} response`);
--- 
-2.49.0
-
-
-From 611a132ebff62c64ae3e6d04bfa9bc3715bc6615 Mon Sep 17 00:00:00 2001
-From: smethnani <82812166+smethnani@users.noreply.github.com>
-Date: Fri, 25 Jul 2025 14:28:08 +0000
-Subject: [PATCH 2/2] Fix axios changes
-
----
- src/dev/build/lib/download.ts | 7 ++-----
- 1 file changed, 2 insertions(+), 5 deletions(-)
-
-diff --git a/src/dev/build/lib/download.ts b/src/dev/build/lib/download.ts
-index 3487d759ac..ded48eca93 100644
---- a/src/dev/build/lib/download.ts
-+++ b/src/dev/build/lib/download.ts
-@@ -36,10 +36,6 @@ import { createHash } from 'crypto';
- import Axios from 'axios';
- import { ToolingLog } from '@osd/dev-utils';
- 
--// https://github.com/axios/axios/tree/ffea03453f77a8176c51554d5f6c3c6829294649/lib/adapters
--// @ts-expect-error untyped internal module used to prevent axios from using xhr adapter in tests
--import AxiosHttpAdapter from 'axios/lib/adapters/http';
--
- import { mkdirp } from './fs';
- import { extraLaunchpadOptions } from './extraLaunchpadOptions';
- 
-@@ -78,10 +74,11 @@ export async function download(options: DownloadOptions): Promise<void> {
-     const extraOptions = url.startsWith('https://canonical.jfrog.io')
-       ? extraLaunchpadOptions()
-       : {};
-+
-     const response = await Axios.request({
-       url,
-       responseType: 'stream',
--      adapter: AxiosHttpAdapter,
-+      adapter: 'http',
-       ...extraOptions,
-     });
- 
 -- 
 2.49.0
 
