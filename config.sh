@@ -1,8 +1,8 @@
-export LAST_VERSION="2.19.4"
-export VERSION="2.19.5"
+export VERSION=""
 export LP_USERNAME=""
 export PREFIX="lp"
 export JFROG_URL="canonical.jfrog.io/artifactory/dataplatform-generic-stable-local/gradle"
+export ARTIFACTORY_URL="https://canonical.jfrog.io/artifactory/dataplatform-opensearch-staging"
 
 export LP_SOSS_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/soss/+source"
 

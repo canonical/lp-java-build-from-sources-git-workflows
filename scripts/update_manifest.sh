@@ -7,7 +7,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PRODUCT_DIR="${ROOT_DIR}/${PRODUCT}"
 . "${PRODUCT_DIR}/config.sh"
 
-cd "${ROOT_DIR}/opensearch-build"
+cd "${ROOT_DIR}/repos/opensearch-build"
 
 # check for uncommitted changes
 if ! git diff --quiet || ! git diff --cached --quiet; then
@@ -24,7 +24,7 @@ fi
 
 cd "${ROOT_DIR}"
 
-MANIFEST="${ROOT_DIR}/opensearch-build/manifests/${VERSION}/${PRODUCT}-${VERSION}.yml"
+MANIFEST="${ROOT_DIR}/repos/opensearch-build/manifests/${VERSION}/${PRODUCT}-${VERSION}.yml"
 
 if [[ "$PRODUCT" == "opensearch" ]]; then
     LP_URL="https://git.launchpad.net/~data-platform/opensearch-project-components/+git"
@@ -85,6 +85,6 @@ if [[ "$PRODUCT" == "opensearch" ]] && ! grep -q "prometheus-exporter" "$MANIFES
 EOF
 fi
 
-cd "${ROOT_DIR}/opensearch-build"
+cd "${ROOT_DIR}/repos/opensearch-build"
 git add "$MANIFEST"
 git diff --cached --quiet || git commit -m "Update manifest for ${PRODUCT} ${VERSION}"

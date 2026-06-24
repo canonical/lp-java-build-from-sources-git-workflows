@@ -1,0 +1,92 @@
+apply plugin: EnterpriseRepositoryPlugin
+
+class EnterpriseRepositoryPlugin implements Plugin<Gradle> {
+
+    private static String ENTERPRISE_REPOSITORY_URL = "$System.env.ARTIFACTORY_URL"
+
+    void apply(Gradle gradle) {
+        // ONLY USE ENTERPRISE REPO FOR DEPENDENCIES
+        gradle.settingsEvaluated { settings ->
+            settings.pluginManagement.repositories {
+                // Remove all repositories not pointing to the canonical JFrog repository url
+                all {
+                    ArtifactRepository repo ->
+                        if (repo.url.toString() != ENTERPRISE_REPOSITORY_URL) {
+                            remove repo
+                        }
+                }
+
+                // add the canonical JFrog repository
+                maven {
+                    name = "Canonical JFrog"
+                    url = "$System.env.ARTIFACTORY_URL"
+                    credentials {
+                        username = "$System.env.ARTIFACTORY_USER"
+                        password = "$System.env.ARTIFACTORY_PASSWORD"
+                    }
+                }
+            }
+        }
+
+        gradle.allprojects { project ->
+            project.repositories {
+
+                // Remove all repositories not pointing to the canonical JFrog repository url
+                all {
+                    ArtifactRepository repo ->
+                        if (repo instanceof UrlArtifactRepository) {
+                            def url = repo.url.toString()
+                            def isLocalFile = url.startsWith("file:")
+                            def isEnterpriseRepo = url == ENTERPRISE_REPOSITORY_URL
+                            if (!isLocalFile && !isEnterpriseRepo) {
+                                project.logger.lifecycle "Repository ${repo.url} removed. Only $ENTERPRISE_REPOSITORY_URL is allowed"
+                                remove repo
+                            }
+                        }
+                }
+
+                // add the canonical JFrog repository
+                maven {
+                    name = "Canonical JFrog"
+                    url = "$System.env.ARTIFACTORY_URL"
+                    credentials {
+                        username = "$System.env.ARTIFACTORY_USER"
+                        password = "$System.env.ARTIFACTORY_PASSWORD"
+                    }
+                }
+            }
+        }
+    }
+}
+
+// add expected tasks for prometheus-exporter
+allprojects {
+    afterEvaluate { project ->
+        if (project.name == 'prometheus-exporter') {
+            project.apply plugin: 'opensearch.pluginzip'
+            project.publishing {
+                publications {
+                    pluginZip(MavenPublication) { publication ->
+                        pom {
+                            name = "prometheus-exporter"
+                            description = "Prometheus metrics exporter plugin for OpenSearch"
+                            groupId = "org.opensearch.plugin"
+                            licenses {
+                                license {
+                                    name = "The Apache License, Version 2.0"
+                                    url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                                }
+                            }
+                            developers {
+                                developer {
+                                    name = "OpenSearch"
+                                    url = "https://github.com/opensearch-project"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

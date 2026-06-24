@@ -1,0 +1,180 @@
+pipeline:
+    - prepare
+    - build
+    - assemble
+    # - release
+
+jobs:
+    prepare:
+        series: noble
+        architectures: amd64
+        environment:
+            BASE_BUILD_DIR: /home/opensearch/opensearch-build
+        package-repositories:
+            - type: apt
+              ppa: pguimaraes/python-jproperties-daily
+              trusted: true
+            - type: apt
+              ppa: pguimaraes/python-retry-daily
+              trusted: true
+        packages:
+            - build-essential
+            - cmake
+            - flake8
+            - gfortran
+            - git
+            - jq
+            - libbz2-dev
+            - libffi-dev
+            - liblzma-dev
+            - libomp-dev
+            - libopenblas-dev
+            - libreadline-dev
+            - libsqlite3-dev
+            - libssl-dev
+            - lptools
+            - openjdk-21-jdk-headless
+            - python-jproperties
+            - python-retry
+            - python3
+            - python3-atomicwrites
+            - python3-cerberus
+            - python3-coverage
+            - python3-importlib-metadata
+            - python3-importlib-resources
+            - python3-isort
+            - python3-launchpadlib
+            - python3-pip
+            - python3-psutil
+            - python3-pytest
+            - python3-pytest-cov
+            - python3-requests
+            - python3-ruamel.yaml
+            - python3-sortedcontainers
+            - python3-typeshed
+            - python3-validators
+            - python3-venv
+            - python3-wheel
+            - python3-yaml
+            - python3-zipp
+            - zip
+            - zlib1g-dev
+            # Used for nmslib:
+            # https://github.com/opensearch-project/k-NN/blob/6203ba1c8b2f430c2558ac2d69128644b6e5ee88/scripts/build.sh#L138
+            - gcc-10
+            - g++-10
+            - gfortran-10
+        snaps:
+            - name: cmake
+              classic: true
+              channel: 3.31/stable # nmslib needs cmake <=3.5
+            - name: yq
+              channel: latest/stable # Assemble stage now needs yq v4+
+            - name: node
+              classic: true
+              channel: 18/stable
+
+        run: |-
+            echo -e "\n\n\n\n##################################\n\n\n\n"
+            echo -e "\nPreparing environment..."
+
+            apt-get update; apt-get upgrade -y
+
+            # remove apt cmake as the version is not supported by the new opensearch builds for KNN plugin  
+            apt-get remove cmake -y
+
+            # create opensearch user
+            id -u opensearch >/dev/null 2>&1 || groupadd -g 1000 opensearch
+            id -u opensearch >/dev/null 2>&1 || adduser -uid 1000 -gid 1000 --disabled-password --gecos "" opensearch
+
+            # create dummy nvm.sh and nvm bin which do nothing (opensearch-dashboards build scripts expect nvm)
+            echo '#!/bin/sh' > /nvm.sh
+            echo 'true' >> /nvm.sh
+            chmod +x /nvm.sh
+            mkdir -p /opt/dummybin
+            echo '#!/bin/sh' > /opt/dummybin/nvm
+            echo 'true' >> /opt/dummybin/nvm
+            chmod -R 755 /opt/dummybin
+            echo 'export PATH="/opt/dummybin:$PATH"' >> /home/opensearch/.profile
+            chown -R opensearch:opensearch "${PWD}"
+
+            # create opensearch-build
+            su -l -c "mkdir -p opensearch-build" opensearch
+
+            # move current project to the opensearch home dir 
+            mv_src_cmd="shopt -s dotglob; mv ${PWD}/* ${BASE_BUILD_DIR}/"
+            su -l -c "${mv_src_cmd}" opensearch
+
+    build:
+        series: noble
+        architectures: amd64
+        environment:
+            OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
+            BASE_BUILD_DIR: /home/opensearch/opensearch-build
+            NODE_ENV: production
+            NO_PROXY: localhost
+            HTTPS_PROXY: 10.10.10.1:8222
+            HTTP_PROXY: 10.10.10.1:8222
+        run: |-
+            echo -e "\n\n\n\n##################################\n\n\n\n"
+            echo -e "\nBuilding OpenSearch Dashboards & Plugins..."
+
+            export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
+            export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
+
+            manifest="${BASE_BUILD_DIR}/manifests/${OPENSEARCH_DASHBOARDS_VERSION}/opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}.yml"
+            cmd="pushd '${BASE_BUILD_DIR}' && PROXYHOST='${HTTP_PROXY}' ARTIFACTORY_USER='${ARTIFACTORY_USER}' ARTIFACTORY_PASSWORD='${ARTIFACTORY_PASSWORD}' bash build.sh '${manifest}' && popd"
+            su - opensearch -c "${cmd}"
+
+    assemble:
+        series: noble
+        architectures: amd64
+        environment:
+            OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
+            BASE_BUILD_DIR: /home/opensearch/opensearch-build
+            NODE_ENV: production
+            NO_PROXY: localhost
+            HTTPS_PROXY: 10.10.10.1:8222
+            HTTP_PROXY: 10.10.10.1:8222
+        run: |-
+            echo -e "\n\n\n\n##################################\n\n\n\n"
+            echo -e "\nAssembling OpenSearch Dashboards Distribution..."
+
+            ls -la /home/opensearch/opensearch-build/tar/builds/opensearch-dashboards/ || true
+
+            # assemble distribution and plugins
+            manifest="${BASE_BUILD_DIR}/tar/builds/opensearch-dashboards/manifest.yml"
+
+            cmd="pushd ${BASE_BUILD_DIR}/ && cat ${manifest} && popd"
+            su -c "${cmd}" opensearch
+
+            cmd="pushd ${BASE_BUILD_DIR}/ && bash assemble.sh ${manifest} && popd"
+            su -c "${cmd}" opensearch
+
+    release:
+        series: noble
+        architectures: amd64
+        environment:
+            PATCH_NUMBER: 0
+            OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
+            BASE_BUILD_DIR: /home/opensearch/opensearch-build
+            NO_PROXY: localhost
+            HTTPS_PROXY: 10.10.10.1:8222
+            HTTP_PROXY: 10.10.10.1:8222
+        run: |-
+            echo -e "\n\n\n\n##################################\n\n\n\n"
+            echo -e "\nPublish the OpenSearch Tarball to Launchpad."
+
+            timestamp="$(date +"%Y%m%d%H%M%S")"
+            tarball="opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}-ubuntu${PATCH_NUMBER}-${timestamp}-linux-x64.tar.gz"
+
+            # copy the tarball to the launchpad build directory
+            cp "${BASE_BUILD_DIR}/tar/dist/opensearch-dashboards/opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}-linux-x64.tar.gz" ./"${tarball}"
+
+            # compute the checksum
+            sha512sum "${tarball}" > "${tarball}.sha512"
+
+        output:
+            paths:
+                - opensearch-dashboards-*-linux-x64.tar.gz
+                - opensearch-dashboards-*-linux-x64.tar.gz.sha512

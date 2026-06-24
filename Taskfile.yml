@@ -6,15 +6,26 @@ tasks:
     cmds:
       - task --list
 
-  clone-build:
-    desc: "Clone opensearch-build and merge upstream"
+  opensearch-build:clone:
+    desc: "opensearch-build: clone from upstream"
     cmds:
-      - "bash ./scripts/0-opensearch-build.sh"
+      - "bash ./opensearch-build/clone.sh"
+
+  opensearch-build:patch:
+    desc: "opensearch-build: apply patches"
+    cmds:
+      - "bash ./opensearch-build/patch.sh"
+
+  opensearch-build:all:
+    desc: "opensearch-build: full workflow"
+    cmds:
+      - task: opensearch-build:clone
+      - task: opensearch-build:patch
 
   all:
     desc: "Opensearch and dashboards full workflow"
     cmds:
-      - task: clone-build
+      - task: opensearch-build:all
       - task: opensearch:all
       - task: dashboards:all
 
@@ -25,8 +36,8 @@ tasks:
       - task: opensearch:clone
       - task: opensearch:patch
       - task: opensearch:push
-      - task: opensearch:update-manifest
       - task: opensearch:update-launchpad
+      - task: opensearch:update-manifest
 
   opensearch:parse-manifest:
     desc: "OpenSearch: read manifest and write repos.txt"
@@ -65,8 +76,8 @@ tasks:
       - task: dashboards:clone
       - task: dashboards:patch
       - task: dashboards:push
-      - task: dashboards:update-manifest
       - task: dashboards:update-launchpad
+      - task: dashboards:update-manifest
 
   dashboards:parse-manifest:
     desc: "Dashboards: read manifest and write repos.txt"

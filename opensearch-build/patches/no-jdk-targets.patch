@@ -1,0 +1,53 @@
+diff --git a/scripts/components/OpenSearch/build.sh b/scripts/components/OpenSearch/build.sh
+index e9e4bf81..220350cc 100755
+--- a/scripts/components/OpenSearch/build.sh
++++ b/scripts/components/OpenSearch/build.sh
+@@ -97,22 +97,22 @@ case $PLATFORM-$DISTRIBUTION-$ARCHITECTURE in
+         PACKAGE="tar"
+         EXT="tar.gz"
+         TYPE="archives"
+-        TARGET="$PLATFORM-$PACKAGE"
+-        SUFFIX="$PLATFORM-x64"
++        TARGET="no-jdk-$PLATFORM-$PACKAGE"
++        SUFFIX="no-jdk-$PLATFORM-x64"
+         ;;
+     linux-tar-arm64|darwin-tar-arm64)
+         PACKAGE="tar"
+         EXT="tar.gz"
+         TYPE="archives"
+-        TARGET="$PLATFORM-arm64-$PACKAGE"
+-        SUFFIX="$PLATFORM-arm64"
++        TARGET="no-jdk-$PLATFORM-arm64-$PACKAGE"
++        SUFFIX="no-jdk-$PLATFORM-arm64"
+         ;;
+     linux-tar-ppc64le)
+         PACKAGE="tar"
+         EXT="tar.gz"
+         TYPE="archives"
+-        TARGET="$PLATFORM-ppc64le-$PACKAGE"
+-        SUFFIX="$PLATFORM-ppc64le"
++        TARGET="no-jdk-$PLATFORM-ppc64le-$PACKAGE"
++        SUFFIX="no-jdk-$PLATFORM-ppc64le"
+         ;;
+     linux-deb-x64)
+         PACKAGE="deb"
+@@ -146,15 +146,15 @@ case $PLATFORM-$DISTRIBUTION-$ARCHITECTURE in
+         PACKAGE="zip"
+         EXT="zip"
+         TYPE="archives"
+-        TARGET="$PLATFORM-$PACKAGE"
+-        SUFFIX="$PLATFORM-x64"
++        TARGET="no-jdk-$PLATFORM-$PACKAGE"
++        SUFFIX="no-jdk-$PLATFORM-x64"
+         ;;
+     windows-zip-arm64)
+         PACKAGE="zip"
+         EXT="zip"
+         TYPE="archives"
+-        TARGET="$PLATFORM-arm64-$PACKAGE"
+-        SUFFIX="$PLATFORM-arm64"
++        TARGET="no-jdk-$PLATFORM-arm64-$PACKAGE"
++        SUFFIX="no-jdk-$PLATFORM-arm64"
+         ;;
+     *)
+         echo "Unsupported platform-distribution-architecture combination: $PLATFORM-$DISTRIBUTION-$ARCHITECTURE"

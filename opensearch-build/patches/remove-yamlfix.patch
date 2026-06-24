@@ -1,0 +1,27 @@
+diff --git a/src/manifests/manifest.py b/src/manifests/manifest.py
+index 2ebbcf33..589c51cb 100644
+--- a/src/manifests/manifest.py
++++ b/src/manifests/manifest.py
+@@ -13,7 +13,6 @@ from typing import IO, Any, Dict, Generic, Optional, Type, TypeVar
+ 
+ import validators
+ import yaml
+-import yamlfix
+ from cerberus import Validator
+ 
+ T = TypeVar('T', bound='Manifest')
+@@ -99,11 +98,9 @@ class Manifest(ABC, Generic[T]):
+     def to_file(self, path: str) -> None:
+         with open(path, "w") as file:
+             file.write(
+-                yamlfix.fix_code(
+-                    yaml.safe_dump(
+-                        self.to_dict(),
+-                        sort_keys=False
+-                    )
++                yaml.safe_dump(
++                    self.to_dict(),
++                    sort_keys=False
+                 )
+             )
+ 

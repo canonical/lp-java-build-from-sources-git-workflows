@@ -5,7 +5,7 @@ PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 . "${ROOT_DIR}/config.sh"
 PRODUCT_DIR="${ROOT_DIR}/${PRODUCT}"
-REPO_BASE="${PRODUCT_DIR}/repos"
+REPO_BASE="${ROOT_DIR}/repos/${PRODUCT}"
 . "${PRODUCT_DIR}/config.sh"
 
 BRANCH="${PREFIX}-${VERSION}"

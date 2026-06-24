@@ -1,0 +1,258 @@
+pipeline:
+  - prepare
+  - build
+  - assemble
+  # - test
+  # - release
+
+jobs:
+  prepare:
+    series: noble
+    architectures: amd64
+    environment:
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+    package-repositories:
+      - type: apt
+        ppa: pguimaraes/python-jproperties-daily
+        trusted: true
+      - type: apt
+        ppa: pguimaraes/python-retry-daily
+        trusted: true
+    packages:
+      - build-essential
+      - cmake
+      - flake8
+      - gfortran
+      - git
+      - libbz2-dev
+      - libffi-dev
+      - liblzma-dev
+      - libomp-dev
+      - libopenblas-dev
+      - libreadline-dev
+      - libsqlite3-dev
+      - libssl-dev
+      - lptools
+      - openjdk-21-jdk-headless
+      - python-jproperties
+      - python-retry
+      - python3
+      - python3-atomicwrites
+      - python3-cerberus
+      - python3-coverage
+      - python3-importlib-metadata
+      - python3-importlib-resources
+      - python3-isort
+      - python3-launchpadlib
+      - python3-pip
+      - python3-psutil
+      - python3-pytest
+      - python3-pytest-cov
+      - python3-requests
+      - python3-ruamel.yaml
+      - python3-sortedcontainers
+      - python3-typeshed
+      - python3-validators
+      - python3-venv
+      - python3-wheel
+      - python3-yaml
+      - python3-zipp
+      - zip
+      - zlib1g-dev
+      # Used for nmslib:
+      # https://github.com/opensearch-project/k-NN/blob/6203ba1c8b2f430c2558ac2d69128644b6e5ee88/scripts/build.sh#L138
+      - gcc-10
+      - g++-10
+      - gfortran-10
+    snaps:
+      - name: cmake
+        classic: true
+        channel: 3.31/stable    # nmslib needs cmake <=3.5
+      - name: yq
+        channel: latest/stable  # Assemble stage now needs yq v4+
+
+    run: |-
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nPreparing environment..."
+      
+      apt-get update; apt-get upgrade -y
+      
+      # remove apt cmake as the version is not supported by the new opensearch builds for KNN plugin  
+      apt-get remove cmake -y
+
+      # create opensearch user
+      id -u opensearch >/dev/null 2>&1 || groupadd -g 1000 opensearch
+      id -u opensearch >/dev/null 2>&1 || adduser -uid 1000 -gid 1000 --disabled-password --gecos "" opensearch
+      chown -R opensearch:opensearch "${PWD}"
+      
+      # create opensearch-build
+      su -l -c "mkdir -p opensearch-build" opensearch
+      
+      # move current project to the opensearch home dir 
+      mv_src_cmd="shopt -s dotglob; mkdir -p ~/.gradle; mv ${PWD}/* ${BASE_BUILD_DIR}/"
+      su -l -c "${mv_src_cmd}" opensearch
+      
+      # copy gradle repo conf
+      su -l -c "mkdir -p ~/.gradle; cp ${BASE_BUILD_DIR}/lp-management-scripts/init.gradle ~/.gradle" opensearch
+
+      # Used for nmslib:
+      # https://github.com/opensearch-project/k-NN/blob/6203ba1c8b2f430c2558ac2d69128644b6e5ee88/scripts/build.sh#L138
+      ln -s /usr/bin/gcc-10 /usr/bin/gcc10-gcc
+      ln -s /usr/bin/g++-10 /usr/bin/gcc10-g++
+      ln -s /usr/bin/gfortran-10 /usr/bin/gcc10-gfortran
+
+  build:
+    series: noble
+    architectures: amd64
+    environment:
+      OPENSEARCH_VERSION: ${VERSION}
+      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch"
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+      no_proxy: localhost
+      https_proxy: 10.10.10.1:8222
+      http_proxy: 10.10.10.1:8222
+      JAVA_HOME: /usr/lib/jvm/java-21-openjdk-amd64
+      _JAVA_OPTIONS: '-Dhttp.proxyHost=10.10.10.1 -Dhttp.proxyPort=8222 -Dhttps.proxyHost=10.10.10.1 -Dhttps.proxyPort=8222 -Dhttp.nonProxyHosts=localhost'
+    run: |-
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nBuilding OpenSearch & Plugins..."
+      
+      # Set artifactory gradle wrapper credentials for downloading dependencies, plugins and the gradle distros from artifactory 
+      export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
+      export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
+      export GRADLE_OPTS="-Dgradle.wrapperUser=${ARTIFACTORY_USER} -Dgradle.wrapperPassword=${ARTIFACTORY_PASSWORD}"
+      
+      manifest="${BASE_BUILD_DIR}/manifests/${OPENSEARCH_VERSION}/opensearch-${OPENSEARCH_VERSION}.yml"
+      cmd="pushd ${BASE_BUILD_DIR}/ && bash build.sh "${manifest}" && popd"
+      su -c "${cmd}" opensearch
+
+  assemble:
+    series: noble
+    architectures: amd64
+    environment:
+      OPENSEARCH_VERSION: ${VERSION}
+      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch"
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+      no_proxy: localhost
+      https_proxy: 10.10.10.1:8222
+      http_proxy: 10.10.10.1:8222
+      JAVA_HOME: /usr/lib/jvm/java-21-openjdk-amd64
+      _JAVA_OPTIONS: '-Dhttp.proxyHost=10.10.10.1 -Dhttp.proxyPort=8222 -Dhttps.proxyHost=10.10.10.1 -Dhttps.proxyPort=8222 -Dhttp.nonProxyHosts=localhost'
+    run: |-
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nAssembling OpenSearch Distribution..."
+      
+      # Set artifactory gradle wrapper credentials for downloading dependencies, plugins and the gradle distros from artifactory 
+      export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
+      export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
+      export GRADLE_OPTS="-Dgradle.wrapperUser=${ARTIFACTORY_USER} -Dgradle.wrapperPassword=${ARTIFACTORY_PASSWORD}"
+      
+      ls -la /home/opensearch/opensearch-build/tar/ || true
+      ls -la /home/opensearch/opensearch-build/tar/builds/ || true
+      ls -la /home/opensearch/opensearch-build/tar/builds/opensearch/ || true
+
+      # assemble distribution and plugins
+      manifest="${BASE_BUILD_DIR}/tar/builds/opensearch/manifest.yml"
+      
+      cmd="pushd ${BASE_BUILD_DIR}/ && cat ${manifest} && popd"
+      su -c "${cmd}" opensearch
+      
+      cmd="pushd ${BASE_BUILD_DIR}/ && bash assemble.sh ${manifest} && popd"
+      su -c "${cmd}" opensearch
+
+      # add missing plugins
+      tarball="opensearch-${OPENSEARCH_VERSION}-linux-x64.tar.gz"
+      s3="${BASE_BUILD_DIR}/tar/builds/opensearch/core-plugins/repository-s3-${OPENSEARCH_VERSION}.zip"
+      gcs="${BASE_BUILD_DIR}/tar/builds/opensearch/core-plugins/repository-gcs-${OPENSEARCH_VERSION}.zip"
+      azure="${BASE_BUILD_DIR}/tar/builds/opensearch/core-plugins/repository-azure-${OPENSEARCH_VERSION}.zip"
+      # Hard coded path, as it is also done in prometheus-exporter build.sh
+      exporter="/home/opensearch/opensearch-build/tar/builds/opensearch/plugins/prometheus-exporter-${OPENSEARCH_VERSION}.0.zip"
+            
+      cmd="pushd ${BASE_BUILD_DIR}/tar/dist/opensearch/;
+          tar -xzvf ${tarball};
+          rm ${tarball};
+          pushd opensearch-${OPENSEARCH_VERSION};
+          bin/opensearch-plugin install -b file:${s3};
+          bin/opensearch-plugin install -b file:${gcs};
+          bin/opensearch-plugin install -b file:${azure};
+          bin/opensearch-plugin install -b file:${exporter};
+          popd;
+          tar -zcvf ${tarball} opensearch-${OPENSEARCH_VERSION};
+          popd"
+            
+      su -c "${cmd}" opensearch
+
+  test:
+    series: noble
+    architectures: amd64
+    environment:
+      OPENSEARCH_VERSION: ${VERSION}
+      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch"
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+      no_proxy: localhost
+      https_proxy: 10.10.10.1:8222
+      http_proxy: 10.10.10.1:8222
+      JAVA_HOME: /usr/lib/jvm/java-21-openjdk-amd64
+      OPENSEARCH_JAVA_HOME: /usr/lib/jvm/java-21-openjdk-amd64
+      _JAVA_OPTIONS: '-Dhttp.proxyHost=10.10.10.1 -Dhttp.proxyPort=8222 -Dhttps.proxyHost=10.10.10.1 -Dhttps.proxyPort=8222 -Dhttp.nonProxyHosts=localhost'
+    run: |-
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nRunning Integration tests for OpenSearch and plugins..."
+      
+      # Set artifactory gradle wrapper credentials for downloading dependencies, plugins and the gradle distros from artifactory 
+      export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
+      export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
+      export GRADLE_OPTS="-Dgradle.wrapperUser=${ARTIFACTORY_USER} -Dgradle.wrapperPassword=${ARTIFACTORY_PASSWORD}"
+      
+      manifest="manifests/${OPENSEARCH_VERSION}/opensearch-${OPENSEARCH_VERSION}-test.yml"
+      
+      # cmd="pushd ${BASE_BUILD_DIR}/ && bash test.sh integ-test ${manifest} --paths opensearch=tar && popd"
+      # su -c "${cmd}" opensearch
+      
+      # run tests per component, so that we get the exact view on all the failing tests
+      # declare -a COMPONENTS=(
+      #     OpenSearch common-utils job-scheduler k-NN geospatial security
+      #     cross-cluster-replication ml-commons neural-search notifications
+      #     observability reporting sql asynchronous-search anomaly-detection 
+      #     alerting security-analytics index-management performance-analyzer
+      # )
+      # for component in "${REPOS[@]}"; do
+      #   echo -e "\n\n\n${component}"
+      
+      #   cmd="pushd ~/opensearch-build/ && bash test.sh integ-test ${manifest} --paths opensearch=tar && popd"
+      #   su -c "${cmd}" opensearch || true
+
+  release:
+    series: noble
+    architectures: amd64
+    environment:
+      PATCH_NUMBER: 0
+      OPENSEARCH_VERSION: ${VERSION}
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+      no_proxy: localhost
+      https_proxy: 10.10.10.1:8222
+      http_proxy: 10.10.10.1:8222
+    run: |-
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nPublish the OpenSearch Tarball to Launchpad."
+      
+      timestamp="$(date +"%Y%m%d%H%M%S")"
+      tarball="opensearch-${OPENSEARCH_VERSION}-ubuntu${PATCH_NUMBER}-${timestamp}-linux-x64.tar.gz"
+
+      # copy the tarball to the launchpad build directory
+      cp "${BASE_BUILD_DIR}/tar/dist/opensearch/opensearch-${OPENSEARCH_VERSION}-linux-x64.tar.gz" ./"${tarball}"
+      
+      # compute the checksum
+      sha512sum "${tarball}" > "${tarball}.sha512"
+      
+      # .m2 repos
+      project_root="${PWD}"
+      pushd /home/opensearch/.m2
+      zip -r repository.zip repository
+      cp repository.zip "${project_root}"
+      popd
+    output:
+      paths:
+        - opensearch-*-linux-x64.tar.gz
+        - opensearch-*-linux-x64.tar.gz.sha512
+        - repository.zip
