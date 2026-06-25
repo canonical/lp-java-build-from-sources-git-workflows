@@ -50,12 +50,8 @@ while read -r repo; do
 
     if [[ ! -d "$local_name" ]]; then
         echo "Cloning into '$local_name'..."
-        if [[ "$repo" == "performance-analyzer-rca" ]]; then
-            git clone -q "https://github.com/opensearch-project/${repo}.git" "$local_name"
-        else
-            git clone -q --single-branch --branch main \
-                "https://github.com/opensearch-project/${repo}.git" "$local_name"
-        fi
+        git clone -q --single-branch --branch main \
+            "https://github.com/opensearch-project/${repo}.git" "$local_name"
     fi
 
     cd "$local_name"
@@ -72,7 +68,7 @@ while read -r repo; do
     if [[ "$repo" == "performance-analyzer-rca" ]]; then
         case "$VERSION" in
             2*)
-                git fetch -q origin 2.x || { echo "ERROR: failed to fetch origin 2.x"; exit 1; }
+                git fetch -q origin 2.x:refs/remotes/origin/2.x || { echo "ERROR: failed to fetch origin 2.x"; exit 1; }
                 base_ref="origin/2.x"
                 ;;
             3*)
