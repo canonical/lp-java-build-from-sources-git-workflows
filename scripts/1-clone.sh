@@ -50,7 +50,7 @@ while read -r repo; do
 
     if [[ ! -d "$local_name" ]]; then
         echo "Cloning into '$local_name'..."
-        git clone -q --single-branch --branch main \
+        git clone -q --filter=blob:none --single-branch --branch main \
             "https://github.com/opensearch-project/${repo}.git" "$local_name"
     fi
 
