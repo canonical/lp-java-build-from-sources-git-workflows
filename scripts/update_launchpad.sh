@@ -37,6 +37,12 @@ sed "s/\${VERSION}/${VERSION}/g" "$TEMPLATE" > "$LAUNCHPAD_YAML"
 sed -i.tmp "s|PATCH_NUMBER:.*|PATCH_NUMBER: ${PATCH_NUMBER}|g" "$LAUNCHPAD_YAML"
 sed -i.tmp "s|ARTIFACTORY_URL:.*|ARTIFACTORY_URL: ${ARTIFACTORY_URL}|g" "$LAUNCHPAD_YAML"
 
+if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
+    case "$VERSION" in
+        3.*) sed -i.tmp "s|channel: 18/stable|channel: 20/stable|" "$LAUNCHPAD_YAML" ;;
+    esac
+fi
+
 rm -f "${LAUNCHPAD_YAML}.tmp"
 
 git add .launchpad.yaml
