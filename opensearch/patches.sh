@@ -94,6 +94,16 @@ patch_alerting() {
     git diff --cached --quiet || git commit -m "Fix ktlint beforeResolve"
 }
 
+patch_prometheus_exporter() {
+    [[ -f "gradle.properties" ]] || return 0
+    grep -q "\-SNAPSHOT" gradle.properties || return 0
+
+    sed -i.tmp 's/-SNAPSHOT//' gradle.properties
+    rm -f gradle.properties.tmp
+    git add gradle.properties
+    git diff --cached --quiet || git commit -m "Remove snapshot from version"
+}
+
 apply_patches() {
     local repo="$1"
 
@@ -114,6 +124,9 @@ apply_patches() {
 
     # remove broken ktlint beforeResolve hook
     [[ "$repo" == "opensearch-alerting" ]] && patch_alerting
+
+    # remove snapshot from opensearch version in prometheus-exporter
+    [[ "$repo" == "opensearch-prometheus-exporter" ]] && patch_prometheus_exporter
 
     return 0
 }
