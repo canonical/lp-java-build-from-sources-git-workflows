@@ -122,6 +122,9 @@ jobs:
             export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
             export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
 
+            su - opensearch -c "yarn config set proxy http://${HTTP_PROXY}"
+            su - opensearch -c "yarn config set https-proxy http://${HTTP_PROXY}"
+
             manifest="${BASE_BUILD_DIR}/manifests/${OPENSEARCH_DASHBOARDS_VERSION}/opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}.yml"
             cmd="pushd '${BASE_BUILD_DIR}' && PROXYHOST='${HTTP_PROXY}' ARTIFACTORY_USER='${ARTIFACTORY_USER}' ARTIFACTORY_PASSWORD='${ARTIFACTORY_PASSWORD}' bash build.sh '${manifest}' && popd"
             su - opensearch -c "${cmd}"
