@@ -19,18 +19,25 @@ fi
 
 # switch to product-specific branch
 if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
-    git checkout -B "${PREFIX}-dashboards-${VERSION}"
+    BRANCH="${PREFIX}-dashboards-${VERSION}"
     TEMPLATE="${PATCHES_DIR}/launchpad-dashboards.yaml.template"
 else
-    git checkout -B "${PREFIX}-${VERSION}"
+    BRANCH="${PREFIX}-${VERSION}"
     TEMPLATE="${PATCHES_DIR}/launchpad.yaml.template"
+fi
+
+if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
+    git checkout "$BRANCH"
+else
+    git checkout -b "$BRANCH"
 fi
 
 # copy .launchpad.yaml from template
 sed "s/\${VERSION}/${VERSION}/g" "$TEMPLATE" > "$LAUNCHPAD_YAML"
 sed -i.tmp "s|PATCH_NUMBER:.*|PATCH_NUMBER: ${PATCH_NUMBER}|g" "$LAUNCHPAD_YAML"
 sed -i.tmp "s|ARTIFACTORY_URL:.*|ARTIFACTORY_URL: ${ARTIFACTORY_URL}|g" "$LAUNCHPAD_YAML"
+
 rm -f "${LAUNCHPAD_YAML}.tmp"
 
 git add .launchpad.yaml
-git diff --cached --quiet || git commit -m "Add .launchpad.yaml for ${PRODUCT}"
+git diff --cached --quiet || git commit -m "Update .launchpad.yaml for ${PRODUCT}"
