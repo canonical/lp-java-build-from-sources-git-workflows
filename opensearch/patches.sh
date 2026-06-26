@@ -84,6 +84,16 @@ patch_security_analytics() {
     git diff --cached --quiet || git commit -m "Fix alerting-spi snapshot version"
 }
 
+patch_alerting() {
+    [[ -f "build.gradle" ]] || return 0
+    grep -q "configurations.ktlint.incoming.beforeResolve" build.gradle || return 0
+
+    sed -i.tmp '/configurations.ktlint.incoming.beforeResolve/,/^}/ { /repositories.clear()/d; }' build.gradle
+    rm -f build.gradle.tmp
+    git add build.gradle
+    git diff --cached --quiet || git commit -m "Fix ktlint beforeResolve"
+}
+
 apply_patches() {
     local repo="$1"
 
@@ -101,6 +111,9 @@ apply_patches() {
 
     # fix alerting-spi snapshot version
     [[ "$repo" == "opensearch-security-analytics" ]] && patch_security_analytics
+
+    # remove broken ktlint beforeResolve hook
+    [[ "$repo" == "opensearch-alerting" ]] && patch_alerting
 
     return 0
 }
