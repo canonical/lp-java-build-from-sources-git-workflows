@@ -15,16 +15,17 @@ for dir in "$REPO_BASE"/*; do
     cd "$dir"
     repo=$(basename "$dir")
 
+    echo
+    echo "$repo"
+
     # check for uncommitted changes
     if ! git diff --quiet || ! git diff --cached --quiet; then
         echo "ERROR: uncommitted changes in $repo"
         exit 1
     fi
 
-    echo
-    echo "$repo"
-
-    git checkout "$BRANCH" 2>/dev/null || { echo "ERROR: no $BRANCH branch"; exit 1; }
+    git show-ref --verify --quiet "refs/heads/$BRANCH" || { echo "ERROR: no $BRANCH branch"; exit 1; }
+    git checkout "$BRANCH"
     git remote get-url launchpad >/dev/null 2>&1 || { echo "ERROR: no launchpad remote"; exit 1; }
 
     lp_tag=$(git tag -l "${PREFIX}-v${VERSION}*" | head -1)

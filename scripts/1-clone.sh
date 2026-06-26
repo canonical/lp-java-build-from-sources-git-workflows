@@ -15,7 +15,7 @@ checkout_or_create_branch() {
     local base_commit="$2"
     local base_name="$3"
 
-    if git rev-parse --verify "$branch" >/dev/null 2>&1; then
+    if git show-ref --verify --quiet "refs/heads/$branch"; then
         echo "Checkout existing $branch"
         git checkout "$branch"
         if ! git merge-base --is-ancestor "$base_commit" HEAD; then
@@ -23,7 +23,7 @@ checkout_or_create_branch() {
             exit 1
         fi
     else
-        git checkout -B "$branch" "$base_commit"
+        git checkout -b "$branch" "$base_commit"
         echo "Created LP branch ${branch}"
     fi
 }
@@ -99,7 +99,7 @@ while read -r repo; do
     lp_tag="${PREFIX}-v${version_tag}"
 
     # only tag if tag doesn't exist or points to wrong commit
-    if ! git rev-parse "$lp_tag^{}" >/dev/null 2>&1 || [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
+    if ! git show-ref --verify --quiet "refs/tags/$lp_tag" || [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
         git tag -f "$lp_tag" -m "$lp_tag"
         echo " Created tag ${lp_tag} from upstream ${version_tag}"
     fi

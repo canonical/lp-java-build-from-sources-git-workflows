@@ -16,16 +16,17 @@ for dir in "$REPO_BASE"/*; do
     cd "$dir"
     repo=$(basename "$dir")
 
+    echo
+    echo "$repo"
+
     # check for uncommitted changes
     if ! git diff --quiet || ! git diff --cached --quiet; then
         echo "ERROR: uncommitted changes in $repo"
         exit 1
     fi
 
-    git checkout "$BRANCH" 2>/dev/null || { echo "ERROR: $repo has no $BRANCH branch"; exit 1; }
-
-    echo
-    echo "$repo"
+    git show-ref --verify --quiet "refs/heads/$BRANCH" || { echo "ERROR: $repo has no $BRANCH branch"; exit 1; }
+    git checkout "$BRANCH"
 
     apply_patches "$repo"
 
@@ -33,7 +34,7 @@ for dir in "$REPO_BASE"/*; do
     [[ -n "$lp_tag" ]] || { echo "ERROR: no ${PREFIX}-v${VERSION}* tag found"; exit 1; }
 
     # only retag if tag doesn't exist or points to wrong commit
-    if ! git rev-parse "$lp_tag^{}" >/dev/null 2>&1 || [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
+    if [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
         git tag -f "$lp_tag" -m "$lp_tag"
     fi
 done

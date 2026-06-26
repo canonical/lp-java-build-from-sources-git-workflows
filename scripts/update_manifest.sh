@@ -15,11 +15,17 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
     exit 1
 fi
 
-# use separate branches for opensearch and dashbaords
+# use separate branches for opensearch and dashboards
 if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
-    git checkout -B "${PREFIX}-dashboards-${VERSION}"
+    BRANCH="${PREFIX}-dashboards-${VERSION}"
 else
-    git checkout -B "${PREFIX}-${VERSION}"
+    BRANCH="${PREFIX}-${VERSION}"
+fi
+
+if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
+    git checkout "$BRANCH"
+else
+    git checkout -b "$BRANCH"
 fi
 
 cd "${ROOT_DIR}"
