@@ -39,7 +39,8 @@ sed -i.tmp "s|ARTIFACTORY_URL:.*|ARTIFACTORY_URL: ${ARTIFACTORY_URL}|g" "$LAUNCH
 
 if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
     case "$VERSION" in
-        3.*) sed -i.tmp "s|channel: 18/stable|channel: 20/stable|" "$LAUNCHPAD_YAML" ;;
+        3.[0-4]*) sed -i.tmp "s|channel: 18/stable|channel: 20/stable|" "$LAUNCHPAD_YAML" ;;
+        3.*)      sed -i.tmp "s|channel: 18/stable|channel: 22/stable|" "$LAUNCHPAD_YAML" ;;
     esac
 fi
 
