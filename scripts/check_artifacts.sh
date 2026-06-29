@@ -63,6 +63,8 @@ check_node() {
 check_gradle
 check_node
 
+sort -u "$OUTPUT" -o "$OUTPUT"
+
 if [[ -s "$OUTPUT" ]]; then
     echo ""
     echo "Missing artifacts written to missing-artifacts.txt"
