@@ -16,18 +16,29 @@ tasks:
     cmds:
       - "bash ./opensearch-build/patch.sh"
 
+  opensearch-build:update:
+    desc: "opensearch-build: full workflow"
+    cmds:
+      - task: opensearch:update-launchpad
+      - task: opensearch:update-manifest
+      - task: dashboards:update-launchpad
+      - task: dashboards:update-manifest
+
   opensearch-build:all:
     desc: "opensearch-build: full workflow"
     cmds:
       - task: opensearch-build:clone
       - task: opensearch-build:patch
+      - task: opensearch-build:update
 
   all:
     desc: "Opensearch and dashboards full workflow"
     cmds:
-      - task: opensearch-build:all
+      - task: opensearch-build:clone
+      - task: opensearch-build:patch
       - task: opensearch:all
       - task: dashboards:all
+      - task: opensearch-build:update
 
   opensearch:all:
     desc: "OpenSearch: full workflow"
@@ -36,8 +47,6 @@ tasks:
       - task: opensearch:clone
       - task: opensearch:patch
       - task: opensearch:push
-      - task: opensearch:update-launchpad
-      - task: opensearch:update-manifest
 
   opensearch:parse-manifest:
     desc: "OpenSearch: read manifest and write repos.txt"
@@ -76,8 +85,6 @@ tasks:
       - task: dashboards:clone
       - task: dashboards:patch
       - task: dashboards:push
-      - task: dashboards:update-launchpad
-      - task: dashboards:update-manifest
 
   dashboards:parse-manifest:
     desc: "Dashboards: read manifest and write repos.txt"
