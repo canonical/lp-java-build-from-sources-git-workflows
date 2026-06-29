@@ -12,14 +12,14 @@ apply_patches() {
             grep -q "ARTIFACTORY_URL" src/dev/build/tasks/nodejs/node_download_info.ts && return 0
 
             case "$VERSION" in
-                2*) git am --3way "$PATCHES_DIR/opensearch-dashboards-2.x.patch" ;;
-                *)  git am --3way "$PATCHES_DIR/opensearch-dashboards-3.x.patch" ;;
+                2*) git am --3way -C1 "$PATCHES_DIR/opensearch-dashboards-2.x.patch" ;;
+                *)  git am --3way -C1 "$PATCHES_DIR/opensearch-dashboards-3.x.patch" ;;
             esac
             ;;
         dashboards-reporting)
             grep -q "canonical.jfrog.io" scripts/postinstall.js 2>/dev/null && return 0
 
-            git am --3way "$PATCHES_DIR/dashboards-reporting.patch"
+            git am --3way -C1 "$PATCHES_DIR/dashboards-reporting.patch"
             ;;
     esac
 
