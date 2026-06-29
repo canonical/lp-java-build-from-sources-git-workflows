@@ -43,7 +43,7 @@ check_node() {
 
     nvmrc="$REPO_BASE/opensearch-dashboards/opensearch-dashboards/.nvmrc"
     if [[ ! -f "$nvmrc" ]]; then
-        echo "No .nvmrc found"
+        echo "No .nvmrc found for opensearch-dashboards"
         return
     fi
 
@@ -51,9 +51,7 @@ check_node() {
     existing=$(jf rt search "${JFROG_REPO}/node/v${version}/*" 2>/dev/null || true)
 
     for artifact in "node-v${version}-linux-x64.tar.gz" "SHASUMS256.txt"; do
-        if echo "$existing" | grep -q "$artifact"; then
-            echo "on jfrog: v${version}/${artifact}"
-        else
+        if ! echo "$existing" | grep -q "$artifact"; then
             echo "NOT on jfrog: node-v${version}/${artifact}"
             echo "node:v${version}:${artifact}" >> "$OUTPUT"
         fi
