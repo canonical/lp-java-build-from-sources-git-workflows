@@ -115,3 +115,13 @@ tasks:
     desc: "Dashboards: update .launchpad.yaml"
     cmds:
       - "bash ./scripts/update_launchpad.sh opensearch-dashboards"
+
+  check-artifacts:
+    desc: "Check if artifacts exist in Artifactory"
+    cmds:
+      - "bash ./scripts/check_artifacts.sh"
+
+  upload-artifacts:
+    desc: "Upload missing artifacts to Artifactory"
+    cmds:
+      - "bash ./scripts/upload_artifacts.sh"
