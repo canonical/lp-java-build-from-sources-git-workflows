@@ -7,15 +7,15 @@ from pathlib import Path
 
 PRODUCT = sys.argv[1]
 VERSION = os.environ["VERSION"]
+VERSION_REF = os.environ["VERSION_REF"]
 
 ROOT_DIR = Path(__file__).parent.parent
 PRODUCT_DIR = ROOT_DIR / PRODUCT
 MANIFEST_NAME = f"{PRODUCT}-{VERSION}.yml"
-
 OUTPUT_PATH = PRODUCT_DIR / "repos.txt"
 
-manifest_url = f"https://raw.githubusercontent.com/opensearch-project/opensearch-build/{VERSION}/manifests/{VERSION}/{MANIFEST_NAME}"
-with urllib.request.urlopen(manifest_url) as response:
+url = f"https://raw.githubusercontent.com/opensearch-project/opensearch-build/{VERSION_REF}/manifests/{VERSION}/{MANIFEST_NAME}"
+with urllib.request.urlopen(url) as response:
     manifest = yaml.safe_load(response.read())
 
 repos = set()

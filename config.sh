@@ -11,3 +11,9 @@ export LP_SOSS_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/soss/+source"
 
 echo "Version: ${VERSION} Branch: ${PREFIX}-${VERSION}"
 echo
+
+# git ref for opensearch-build (if version tag is missing, add specific commit here)
+case "$VERSION" in
+    3.7.0) export VERSION_REF="6d305d48a5493c907b1c17aae161b9b3dbcacdf2" ;;
+    *)     export VERSION_REF="$VERSION" ;;
+esac

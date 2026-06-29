@@ -25,16 +25,16 @@ fi
 
 git fetch -q origin --tags || { echo "ERROR: failed to fetch origin tags"; exit 1; }
 
-git rev-parse "${VERSION}" >/dev/null 2>&1 || { echo "ERROR: tag ${VERSION} not found"; exit 1; }
+git rev-parse "${VERSION_REF}" >/dev/null 2>&1 || { echo "ERROR: ref ${VERSION_REF} not found"; exit 1; }
 
 if git rev-parse --verify "$BRANCH" >/dev/null 2>&1; then
     git checkout "$BRANCH"
-    if ! git merge-base --is-ancestor "${VERSION}" HEAD; then
+    if ! git merge-base --is-ancestor "${VERSION_REF}" HEAD; then
         echo "ERROR: $BRANCH exists and isn't based on ${VERSION}"
         exit 1
     fi
 else
-    git checkout -B "$BRANCH" "${VERSION}"
+    git checkout -B "$BRANCH" "${VERSION_REF}"
 fi
 
 git remote remove launchpad 2>/dev/null || true
