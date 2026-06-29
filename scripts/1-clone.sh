@@ -104,4 +104,10 @@ while read -r repo; do
         echo " Created tag ${lp_tag} from upstream ${version_tag}"
     fi
 
+    if [[ "$repo" == "opensearch-prometheus-exporter" ]]; then
+        # .gitattributes in this repo forces crlf changes
+        #  git checkout -- gradlew.bat doesn't work so ignore changes to the file
+        git update-index --skip-worktree gradlew.bat
+    fi
+
 done < "$REPOS_FILE"
