@@ -77,17 +77,13 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 done < "$INPUT"
 
 if [[ -z "$verified" ]]; then
-    echo "No artifacts verified successfully"
+    echo "No verified artifacts to upload"
     exit 1
 fi
 
+echo "$verified"
 echo ""
-echo "$verified" | while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
-    echo "  $line"
-done
 
-echo ""
 read -p "Upload all to Artifactory? [y/N] " confirm
 [[ "$confirm" == "y" || "$confirm" == "Y" ]] || exit 0
 
