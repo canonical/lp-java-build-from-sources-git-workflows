@@ -107,6 +107,17 @@ patch_prometheus_exporter() {
     git diff --cached --quiet || git commit -m "Remove snapshot from version"
 }
 
+patch_reporting() {
+    grep -q "git.launchpad.net" build.gradle && return 0
+
+    sed -i.tmp \
+        -e "s|\"https://raw.githubusercontent.com/opensearch-project/security/refs/heads/main/bwc-test/src/test/resources/security/\" + file|\"https://git.launchpad.net/~data-platform/opensearch-project-components/+git/opensearch-security/plain/bwc-test/src/test/resources/security/\${file}?h=${PREFIX}-${VERSION}\"|" \
+        build.gradle
+    rm -f build.gradle.tmp
+    git add build.gradle
+    git diff --cached --quiet || git commit -m "Replace cert download urls"
+}
+
 apply_patches() {
     local repo="$1"
 
@@ -130,6 +141,9 @@ apply_patches() {
 
     # remove snapshot from opensearch version in prometheus-exporter
     [[ "$repo" == "opensearch-prometheus-exporter" ]] && patch_prometheus_exporter
+
+    # replace github urls with lp urls for cert downloads
+    [[ "$repo" == "opensearch-reporting" ]] && patch_reporting
 
     return 0
 }
