@@ -73,8 +73,11 @@ patch_performance_analyzer() {
 
 patch_security_analytics() {
     [[ -f "build.gradle" ]] || return 0
-    grep -q 'alerting_spi_build += "-SNAPSHOT"' build.gradle || return 0
-    grep -q '// alerting_spi_build += "-SNAPSHOT"' build.gradle && return 0
+
+    # check if "-snapshot" append is already inside the if block
+    if grep -A1 'if (isSnapshot) {' build.gradle | grep -q 'alerting_spi_build += "-SNAPSHOT"'; then
+        return 0
+    fi
 
     sed -i.tmp 's|alerting_spi_build += "-SNAPSHOT"|// alerting_spi_build += "-SNAPSHOT"|' build.gradle
     sed -i.tmp 's|if (isSnapshot) {|if (isSnapshot) {\
