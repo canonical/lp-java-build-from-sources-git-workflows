@@ -1,5 +1,4 @@
 .env
 repos/
 */repos.txt
-.artifact-cache/
-missing-artifacts.txt
+artifacts/

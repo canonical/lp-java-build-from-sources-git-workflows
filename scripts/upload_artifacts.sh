@@ -2,9 +2,9 @@
 set -eu
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-INPUT="${ROOT_DIR}/missing-artifacts.txt"
+INPUT="${ROOT_DIR}/artifacts/missing.txt"
 REPO="dataplatform-generic-stable-local"
-CACHE_DIR="${ROOT_DIR}/.artifact-cache"
+CACHE_DIR="${ROOT_DIR}/artifacts/cache"
 
 if [[ ! -s "$INPUT" ]]; then
     echo "No missing artifacts to upload"

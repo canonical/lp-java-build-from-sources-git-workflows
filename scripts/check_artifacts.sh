@@ -4,9 +4,10 @@ set -eu
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_BASE="${ROOT_DIR}/repos"
 JFROG_REPO="dataplatform-generic-stable-local"
-OUTPUT="${ROOT_DIR}/missing-artifacts.txt"
+OUTPUT="${ROOT_DIR}/artifacts/missing.txt"
 
 : > "$OUTPUT"
+mkdir -p "${ROOT_DIR}/artifacts"
 
 check_gradle() {
     echo "Checking gradle artifacts..."
