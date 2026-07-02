@@ -50,12 +50,11 @@ check_node() {
     version=$(cat "$nvmrc" | tr -d '[:space:]')
     existing=$(jf rt search "${JFROG_REPO}/node/v${version}/*" 2>/dev/null || true)
 
-    for artifact in "node-v${version}-linux-x64.tar.gz" "SHASUMS256.txt"; do
-        if ! echo "$existing" | grep -q "$artifact"; then
-            echo "NOT on jfrog: node-v${version}/${artifact}"
-            echo "node:v${version}:${artifact}" >> "$OUTPUT"
-        fi
-    done
+    tarball="node-v${version}-linux-x64.tar.gz"
+    if ! echo "$existing" | grep -q "$tarball"; then
+        echo "NOT on jfrog: node-v${version}/${tarball}"
+        echo "node:v${version}:${tarball}" >> "$OUTPUT"
+    fi
 }
 
 check_gradle

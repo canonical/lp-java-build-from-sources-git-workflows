@@ -38,7 +38,7 @@ verify_checksum() {
     echo "checksum ok"
 }
 
-verified=""
+verified=()
 while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "$line" ]] && continue
 
@@ -68,28 +68,31 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ "$type" == "gradle" ]]; then
         expected=$(curl -fsSL "${source_url}.sha256")
         verify_checksum "$artifact" "$expected" || continue
-    elif [[ "$type" == "node" && "$artifact" != "SHASUMS256.txt" ]]; then
-        expected=$(curl -fsSL "https://nodejs.org/dist/${version}/SHASUMS256.txt" | grep "$artifact" | cut -d' ' -f1)
+    elif [[ "$type" == "node" ]]; then
+        curl -fsSL "https://nodejs.org/dist/${version}/SHASUMS256.txt" -o "${CACHE_DIR}/SHASUMS256.txt"
+        expected=$(grep "$artifact" "${CACHE_DIR}/SHASUMS256.txt" | cut -d' ' -f1)
         verify_checksum "$artifact" "$expected" || continue
+        verified+=("node:${version}:SHASUMS256.txt")
     fi
 
-    verified="$verified$line"$'\n'
+    verified+=("$line")
 done < "$INPUT"
 
-if [[ -z "$verified" ]]; then
+if [[ ${#verified[@]} -eq 0 ]]; then
     echo "No verified artifacts to upload"
     exit 1
 fi
 
-echo "$verified"
+for item in "${verified[@]}"; do
+    echo "  $item"
+done
 echo ""
 
 read -p "Upload all to Artifactory? [y/N] " confirm
 [[ "$confirm" == "y" || "$confirm" == "Y" ]] || exit 0
 
 # upload to artifactory
-echo "$verified" | while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
+for line in "${verified[@]}"; do
 
     type=$(echo "$line" | cut -d: -f1)
 
