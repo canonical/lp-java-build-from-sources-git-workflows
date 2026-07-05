@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+PATCHES_DIR="${PRODUCT_DIR}/patches"
+
 get_spotless_files() {
     case "$1" in
         opensearch-learning-to-rank-base) echo "build.gradle" ;;
@@ -43,16 +45,22 @@ patch_spotless() {
 }
 
 patch_knn() {
-    grep -q "git.launchpad.net" .gitmodules && return 0
+    if ! grep -q "git.launchpad.net" .gitmodules; then
+        sed -i.tmp \
+            -e 's|https://github.com/nmslib/nmslib.git|https://git.launchpad.net/~data-platform/opensearch-project-components/+git/python-nmslib|' \
+            -e 's|https://github.com/facebookresearch/faiss.git|https://git.launchpad.net/~data-platform/opensearch-project-components/+git/python-faiss|' \
+            .gitmodules
+        rm -f .gitmodules.tmp
+        sed -i.tmp "s|cut -d ' ' -f3|cut -d ' ' -f4|" scripts/build.sh && rm -f scripts/build.sh.tmp
+        git add .gitmodules scripts/build.sh
+        git commit -m "Change git submodules and gcc version parsing"
+    fi
 
-    sed -i.tmp \
-        -e 's|https://github.com/nmslib/nmslib.git|https://git.launchpad.net/~data-platform/opensearch-project-components/+git/python-nmslib|' \
-        -e 's|https://github.com/facebookresearch/faiss.git|https://git.launchpad.net/~data-platform/opensearch-project-components/+git/python-faiss|' \
-        .gitmodules
-    rm -f .gitmodules.tmp
-    [[ -f "scripts/build.sh" ]] && sed -i.tmp "s|cut -d ' ' -f3|cut -d ' ' -f4|" scripts/build.sh && rm -f scripts/build.sh.tmp
-    git add .gitmodules scripts/build.sh 2>/dev/null || true
-    git diff --cached --quiet || git commit -m "Change git submodules and gcc version parsing"
+    if ! grep -q "aarch64" build.gradle; then
+        git apply "${PATCHES_DIR}/knn.patch"
+        git add build.gradle
+        git commit -m "Add arm64 blas libs"
+    fi
 }
 
 patch_performance_analyzer() {
