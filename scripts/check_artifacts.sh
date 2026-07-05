@@ -51,11 +51,13 @@ check_node() {
     version=$(cat "$nvmrc" | tr -d '[:space:]')
     existing=$(jf rt search "${JFROG_REPO}/node/v${version}/*" 2>/dev/null || true)
 
-    tarball="node-v${version}-linux-x64.tar.gz"
-    if ! echo "$existing" | grep -q "$tarball"; then
-        echo "NOT on jfrog: node-v${version}/${tarball}"
-        echo "node:v${version}:${tarball}" >> "$OUTPUT"
-    fi
+    for arch in x64 arm64; do
+        tarball="node-v${version}-linux-${arch}.tar.gz"
+        if ! echo "$existing" | grep -q "$tarball"; then
+            echo "NOT on jfrog: node-v${version}/${tarball}"
+            echo "node:v${version}:${tarball}" >> "$OUTPUT"
+        fi
+    done
 }
 
 check_gradle
