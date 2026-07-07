@@ -100,7 +100,7 @@ while read -r repo; do
 
     # only tag if tag doesn't exist or points to wrong commit
     if ! git show-ref --verify --quiet "refs/tags/$lp_tag" || [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
-        git tag -f "$lp_tag" -m "$lp_tag"
+        git tag -f "$lp_tag"
         echo " Created tag ${lp_tag} from upstream ${version_tag}"
     fi
 

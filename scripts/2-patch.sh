@@ -35,6 +35,6 @@ for dir in "$REPO_BASE"/*; do
 
     # only retag if tag doesn't exist or points to wrong commit
     if [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
-        git tag -f "$lp_tag" -m "$lp_tag"
+        git tag -f "$lp_tag"
     fi
 done
