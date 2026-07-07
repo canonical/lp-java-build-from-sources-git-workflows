@@ -16,15 +16,13 @@ get_spotless_files() {
 patch_gradle() {
     local wrapper="gradle/wrapper/gradle-wrapper.properties"
     [[ -f "notifications/$wrapper" ]] && wrapper="notifications/$wrapper"
-    [[ -f "$wrapper" ]] || return 0
 
     grep -q "$JFROG_URL" "$wrapper" && return 0
 
     sed -i.tmp "s|services.gradle.org/distributions|${JFROG_URL}|g" "$wrapper"
-    sed -i.tmp "s|^# distributionSha256Sum|distributionSha256Sum|" "$wrapper"
     rm -f "${wrapper}.tmp"
     git add "$wrapper"
-    git diff --cached --quiet || git commit -m "Change Gradle distro url"
+    git commit -m "Change Gradle distro url"
 }
 
 patch_spotless() {
@@ -41,7 +39,7 @@ patch_spotless() {
         rm -f "${f}.tmp"
         git add "$f"
     done
-    git diff --cached --quiet || git commit -m "Remove broken mirror from Spotless config"
+    git commit -m "Remove broken mirror from Spotless config"
 }
 
 patch_knn() {
@@ -64,8 +62,6 @@ patch_knn() {
 }
 
 patch_performance_analyzer() {
-    [[ -f "build.gradle" ]] && grep -q "performance-analyzer-rca" build.gradle || return 0
-
     grep -q "git.launchpad.net" build.gradle && return 0
 
     BRANCH="${PREFIX}-${VERSION}"
@@ -76,43 +72,34 @@ patch_performance_analyzer() {
         build.gradle
     rm -f build.gradle.tmp
     git add build.gradle
-    git diff --cached --quiet || git commit -m "Update LP remote RCA"
+    git commit -m "Update LP remote RCA"
 }
 
 patch_security_analytics() {
-    [[ -f "build.gradle" ]] || return 0
+    # check if "-snapshot" appears before if block (should be fixed in 3.4.0 but still exists in 2.19.x)
+    grep -B1 'if (isSnapshot) {' build.gradle | grep -q 'alerting_spi_build += "-SNAPSHOT"' || return 0
 
-    # check if "-snapshot" append is already inside the if block
-    if grep -A1 'if (isSnapshot) {' build.gradle | grep -q 'alerting_spi_build += "-SNAPSHOT"'; then
-        return 0
-    fi
-
-    sed -i.tmp 's|alerting_spi_build += "-SNAPSHOT"|// alerting_spi_build += "-SNAPSHOT"|' build.gradle
-    sed -i.tmp 's|if (isSnapshot) {|if (isSnapshot) {\
-            alerting_spi_build += "-SNAPSHOT"|' build.gradle
-    rm -f build.gradle.tmp
+    git apply "${PATCHES_DIR}/security-analytics.patch"
     git add build.gradle
-    git diff --cached --quiet || git commit -m "Fix alerting-spi snapshot version"
+    git commit -m "Fix alerting-spi snapshot version"
 }
 
 patch_alerting() {
-    [[ -f "build.gradle" ]] || return 0
     grep -q "configurations.ktlint.incoming.beforeResolve" build.gradle || return 0
+    grep -q "repositories.clear()" build.gradle || return 0
 
-    sed -i.tmp '/configurations.ktlint.incoming.beforeResolve/,/^}/ { /repositories.clear()/d; }' build.gradle
-    rm -f build.gradle.tmp
+    git apply "${PATCHES_DIR}/alerting.patch"
     git add build.gradle
-    git diff --cached --quiet || git commit -m "Fix ktlint beforeResolve"
+    git commit -m "Fix ktlint beforeResolve"
 }
 
 patch_prometheus_exporter() {
-    [[ -f "gradle.properties" ]] || return 0
-    grep -q "\-SNAPSHOT" gradle.properties || return 0
+    grep -q "^opensearch_version.*-SNAPSHOT" gradle.properties || return 0
 
-    sed -i.tmp 's/-SNAPSHOT//' gradle.properties
+    sed -i.tmp '/^opensearch_version/s/-SNAPSHOT//' gradle.properties
     rm -f gradle.properties.tmp
     git add gradle.properties
-    git diff --cached --quiet || git commit -m "Remove snapshot from version"
+    git commit -m "Remove snapshot from version"
 }
 
 patch_reporting() {
@@ -123,7 +110,7 @@ patch_reporting() {
         build.gradle
     rm -f build.gradle.tmp
     git add build.gradle
-    git diff --cached --quiet || git commit -m "Replace cert download urls"
+    git commit -m "Replace cert download urls"
 }
 
 apply_patches() {
