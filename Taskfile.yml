@@ -6,6 +6,15 @@ tasks:
     cmds:
       - task --list
 
+  all:
+    desc: "Opensearch and dashboards full workflow"
+    cmds:
+      - task: opensearch-build:clone
+      - task: opensearch-build:patch
+      - task: opensearch:all
+      - task: dashboards:all
+      - task: opensearch-build:update
+
   opensearch-build:clone:
     desc: "opensearch-build: clone from upstream"
     cmds:
@@ -31,19 +40,11 @@ tasks:
       - task: opensearch-build:patch
       - task: opensearch-build:update
 
-  all:
-    desc: "Opensearch and dashboards full workflow"
-    cmds:
-      - task: opensearch-build:clone
-      - task: opensearch-build:patch
-      - task: opensearch:all
-      - task: dashboards:all
-      - task: opensearch-build:update
-
   opensearch:all:
     desc: "OpenSearch: full workflow"
     cmds:
       - task: opensearch:parse-manifest
+      - task: opensearch:update-submodules
       - task: opensearch:clone
       - task: opensearch:patch
       - task: opensearch:push
@@ -52,6 +53,11 @@ tasks:
     desc: "OpenSearch: read manifest and write repos.txt"
     cmds:
       - ". ./config.sh && python3 ./scripts/parse_manifest.py opensearch"
+
+  opensearch:update-submodules:
+    desc: "OpenSearch: clone and push knn submodules"
+    cmds:
+      - "bash ./scripts/update_submodules.sh"
 
   opensearch:clone:
     desc: "OpenSearch: clone all repos, create LP branches and tags"
