@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 . "${ROOT_DIR}/config.sh"
 . "${ROOT_DIR}/${PRODUCT}/config.sh"
 
-PATCHES_DIR="${ROOT_DIR}/opensearch-build/patches"
+TEMPLATES_DIR="${ROOT_DIR}/opensearch-build/templates"
 LAUNCHPAD_YAML="${ROOT_DIR}/repos/opensearch-build/.launchpad.yaml"
 
 cd "${ROOT_DIR}/repos/opensearch-build"
@@ -20,10 +20,10 @@ fi
 # switch to product-specific branch
 if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
     BRANCH="${PREFIX}-dashboards-${VERSION}"
-    TEMPLATE="${PATCHES_DIR}/launchpad-dashboards.yaml.template"
+    TEMPLATE="${TEMPLATES_DIR}/launchpad-dashboards.yaml.template"
 else
     BRANCH="${PREFIX}-${VERSION}"
-    TEMPLATE="${PATCHES_DIR}/launchpad.yaml.template"
+    TEMPLATE="${TEMPLATES_DIR}/launchpad.yaml.template"
 fi
 
 if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then

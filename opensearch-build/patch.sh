@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 OPENSEARCH_BUILD_DIR="${ROOT_DIR}/repos/opensearch-build"
 PATCHES_DIR="${ROOT_DIR}/opensearch-build/patches"
+TEMPLATES_DIR="${ROOT_DIR}/opensearch-build/templates"
 
 cd "$OPENSEARCH_BUILD_DIR"
 
@@ -25,6 +26,6 @@ if [[ -f scripts/release-notes/release-notes.sh ]]; then
     git diff --cached --quiet || git commit -m "Remove release-notes script"
 fi
 
-cp -r "$PATCHES_DIR/lp-management-scripts" .
+cp -r "$TEMPLATES_DIR/lp-management-scripts" .
 git add lp-management-scripts
 git diff --cached --quiet || git commit -m "Add lp-management-scripts"
