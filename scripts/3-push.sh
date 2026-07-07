@@ -26,7 +26,7 @@ for dir in "$REPO_BASE"/*; do
 
     git show-ref --verify --quiet "refs/heads/$BRANCH" || { echo "ERROR: no $BRANCH branch"; exit 1; }
     git checkout "$BRANCH"
-    git remote get-url launchpad >/dev/null 2>&1 || { echo "ERROR: no launchpad remote"; exit 1; }
+    git remote get-url launchpad || { echo "ERROR: no launchpad remote"; exit 1; }
 
     lp_tag=$(git tag -l "${PREFIX}-v${VERSION}*" | head -1)
     [[ -n "$lp_tag" ]] || { echo "ERROR: no tag"; exit 1; }
@@ -44,6 +44,7 @@ for dir in "$REPO_BASE"/*; do
 
     remote_head=$(git ls-remote launchpad "refs/heads/$BRANCH" 2>/dev/null | cut -f1)
     remote_tag=$(git ls-remote launchpad "refs/tags/${lp_tag}^{}" 2>/dev/null | cut -f1)
+    [[ -z "$remote_tag" ]] && remote_tag=$(git ls-remote launchpad "refs/tags/${lp_tag}" 2>/dev/null | cut -f1)
 
     if [[ "$local_head" == "$remote_head" && "$local_tag" == "$remote_tag" ]]; then
         echo "Already up to date."
@@ -51,7 +52,7 @@ for dir in "$REPO_BASE"/*; do
     fi
 
     echo "Pushing branch '$BRANCH' and tag '$lp_tag' to launchpad..."
-    git fetch launchpad 2>/dev/null || true
+    git fetch launchpad --quiet
     git push launchpad "$BRANCH" --force
     git push launchpad "$lp_tag" --force
 done
