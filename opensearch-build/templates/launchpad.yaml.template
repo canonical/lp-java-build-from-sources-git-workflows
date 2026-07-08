@@ -51,21 +51,21 @@ jobs:
     run: |-
       echo -e "\n\n\n\n##################################\n\n\n\n"
       echo -e "\nPreparing environment..."
-      
+
       apt-get update; apt-get upgrade -y
 
       # create opensearch user
       id -u opensearch >/dev/null 2>&1 || groupadd -g 1000 opensearch
       id -u opensearch >/dev/null 2>&1 || adduser -uid 1000 -gid 1000 --disabled-password --gecos "" opensearch
       chown -R opensearch:opensearch "${PWD}"
-      
+
       # create opensearch-build
       su -l -c "mkdir -p opensearch-build" opensearch
-      
+
       # move current project to the opensearch home dir 
       mv_src_cmd="shopt -s dotglob; mkdir -p ~/.gradle; mv ${PWD}/* ${BASE_BUILD_DIR}/"
       su -l -c "${mv_src_cmd}" opensearch
-      
+
       # copy gradle repo conf
       su -l -c "mkdir -p ~/.gradle; cp ${BASE_BUILD_DIR}/lp-management-scripts/init.gradle ~/.gradle" opensearch
 
@@ -99,7 +99,7 @@ jobs:
       export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
       export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
       export GRADLE_OPTS="-Dgradle.wrapperUser=${ARTIFACTORY_USER} -Dgradle.wrapperPassword=${ARTIFACTORY_PASSWORD}"
-      
+
       manifest="${BASE_BUILD_DIR}/manifests/${OPENSEARCH_VERSION}/opensearch-${OPENSEARCH_VERSION}.yml"
       cmd="pushd ${BASE_BUILD_DIR}/ && bash build.sh "${manifest}" && popd"
       su -c "${cmd}" opensearch
@@ -132,10 +132,10 @@ jobs:
 
       # assemble distribution and plugins
       manifest="${BASE_BUILD_DIR}/tar/builds/opensearch/manifest.yml"
-      
+
       cmd="pushd ${BASE_BUILD_DIR}/ && cat ${manifest} && popd"
       su -c "${cmd}" opensearch
-      
+
       cmd="pushd ${BASE_BUILD_DIR}/ && bash assemble.sh ${manifest} && popd"
       su -c "${cmd}" opensearch
 
@@ -144,7 +144,7 @@ jobs:
       s3="${BASE_BUILD_DIR}/tar/builds/opensearch/core-plugins/repository-s3-${OPENSEARCH_VERSION}.zip"
       gcs="${BASE_BUILD_DIR}/tar/builds/opensearch/core-plugins/repository-gcs-${OPENSEARCH_VERSION}.zip"
       azure="${BASE_BUILD_DIR}/tar/builds/opensearch/core-plugins/repository-azure-${OPENSEARCH_VERSION}.zip"
-            
+
       cmd="pushd ${BASE_BUILD_DIR}/tar/dist/opensearch/;
           tar -xzvf ${tarball};
           rm ${tarball};

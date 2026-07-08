@@ -1,146 +1,146 @@
 pipeline:
-    - prepare
-    - build
-    - assemble
-    - release
+  - prepare
+  - build
+  - assemble
+  - release
 
 jobs:
-    prepare:
-        series: noble
-        architectures:
-            - amd64
-            - arm64
-        environment:
-            BASE_BUILD_DIR: /home/opensearch/opensearch-build
-        package-repositories:
-            - type: apt
-              ppa: smethnani/python3-jproperties
-              trusted: true
-        packages:
-            - build-essential
-            - git
-            - jq
-            - libssl-dev
-            - lptools
-            - python3-jproperties
-            - python3-cerberus
-            - python3-launchpadlib
-            - python3-psutil
-            - python3-requests
-            - python3-sortedcontainers
-            - python3-validators
-            - python3-yaml
-            - zip
-            - zlib1g-dev
-        snaps:
-            - name: node
-              classic: true
-              channel: 18/stable
+  prepare:
+    series: noble
+    architectures:
+      - amd64
+      - arm64
+    environment:
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+    package-repositories:
+      - type: apt
+        ppa: smethnani/python3-jproperties
+        trusted: true
+    packages:
+      - build-essential
+      - git
+      - jq
+      - libssl-dev
+      - lptools
+      - python3-jproperties
+      - python3-cerberus
+      - python3-launchpadlib
+      - python3-psutil
+      - python3-requests
+      - python3-sortedcontainers
+      - python3-validators
+      - python3-yaml
+      - zip
+      - zlib1g-dev
+    snaps:
+      - name: node
+        classic: true
+        channel: 18/stable
 
-        run: |-
-            echo -e "\n\n\n\n##################################\n\n\n\n"
-            echo -e "\nPreparing environment..."
+    run: |-
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nPreparing environment..."
 
-            apt-get update; apt-get upgrade -y
+      apt-get update; apt-get upgrade -y
 
-            # create opensearch user
-            id -u opensearch >/dev/null 2>&1 || groupadd -g 1000 opensearch
-            id -u opensearch >/dev/null 2>&1 || adduser -uid 1000 -gid 1000 --disabled-password --gecos "" opensearch
+      # create opensearch user
+      id -u opensearch >/dev/null 2>&1 || groupadd -g 1000 opensearch
+      id -u opensearch >/dev/null 2>&1 || adduser -uid 1000 -gid 1000 --disabled-password --gecos "" opensearch
 
-            # create dummy nvm which does nothing (opensearch-dashboards build scripts expect nvm)
-            mkdir -p /opt/nvm
-            echo 'nvm() { true; }' > /opt/nvm/nvm.sh
-            chown -R opensearch:opensearch "${PWD}"
+      # create dummy nvm which does nothing (opensearch-dashboards build scripts expect nvm)
+      mkdir -p /opt/nvm
+      echo 'nvm() { true; }' > /opt/nvm/nvm.sh
+      chown -R opensearch:opensearch "${PWD}"
 
-            # create opensearch-build
-            su -l -c "mkdir -p opensearch-build" opensearch
+      # create opensearch-build
+      su -l -c "mkdir -p opensearch-build" opensearch
 
-            # move current project to the opensearch home dir 
-            mv_src_cmd="shopt -s dotglob; mv ${PWD}/* ${BASE_BUILD_DIR}/"
-            su -l -c "${mv_src_cmd}" opensearch
+      # move current project to the opensearch home dir 
+      mv_src_cmd="shopt -s dotglob; mv ${PWD}/* ${BASE_BUILD_DIR}/"
+      su -l -c "${mv_src_cmd}" opensearch
 
-    build:
-        series: noble
-        architectures:
-            - amd64
-            - arm64
-        environment:
-            OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
-            BASE_BUILD_DIR: /home/opensearch/opensearch-build
-            NVM_DIR: /opt/nvm
-            NO_PROXY: localhost
-            HTTPS_PROXY: 10.10.10.1:8222
-            HTTP_PROXY: 10.10.10.1:8222
-            PROXYHOST: 10.10.10.1:8222
-        run: |-
-            echo -e "\n\n\n\n##################################\n\n\n\n"
-            echo -e "\nBuilding OpenSearch Dashboards & Plugins..."
+  build:
+    series: noble
+    architectures:
+      - amd64
+      - arm64
+    environment:
+      OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+      NVM_DIR: /opt/nvm
+      NO_PROXY: localhost
+      HTTPS_PROXY: 10.10.10.1:8222
+      HTTP_PROXY: 10.10.10.1:8222
+      PROXYHOST: 10.10.10.1:8222
+    run: |-
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nBuilding OpenSearch Dashboards & Plugins..."
 
-            export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
-            export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
+      export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
+      export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
 
-            su -c "yarn config set proxy http://${HTTP_PROXY}" opensearch
-            su -c "yarn config set https-proxy http://${HTTP_PROXY}" opensearch
+      su -c "yarn config set proxy http://${HTTP_PROXY}" opensearch
+      su -c "yarn config set https-proxy http://${HTTP_PROXY}" opensearch
 
-            manifest="${BASE_BUILD_DIR}/manifests/${OPENSEARCH_DASHBOARDS_VERSION}/opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}.yml"
-            cmd="pushd '${BASE_BUILD_DIR}' && bash build.sh '${manifest}' && popd"
-            su -c "${cmd}" opensearch
+      manifest="${BASE_BUILD_DIR}/manifests/${OPENSEARCH_DASHBOARDS_VERSION}/opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}.yml"
+      cmd="pushd '${BASE_BUILD_DIR}' && bash build.sh '${manifest}' && popd"
+      su -c "${cmd}" opensearch
 
-    assemble:
-        series: noble
-        architectures:
-            - amd64
-            - arm64
-        environment:
-            OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
-            BASE_BUILD_DIR: /home/opensearch/opensearch-build
-            NO_PROXY: localhost
-            HTTPS_PROXY: 10.10.10.1:8222
-            HTTP_PROXY: 10.10.10.1:8222
-        run: |-
-            echo -e "\n\n\n\n##################################\n\n\n\n"
-            echo -e "\nAssembling OpenSearch Dashboards Distribution..."
+  assemble:
+    series: noble
+    architectures:
+      - amd64
+      - arm64
+    environment:
+      OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+      NO_PROXY: localhost
+      HTTPS_PROXY: 10.10.10.1:8222
+      HTTP_PROXY: 10.10.10.1:8222
+    run: |-
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nAssembling OpenSearch Dashboards Distribution..."
 
-            ls -la /home/opensearch/opensearch-build/tar/builds/opensearch-dashboards/ || true
+      ls -la /home/opensearch/opensearch-build/tar/builds/opensearch-dashboards/ || true
 
-            # assemble distribution and plugins
-            manifest="${BASE_BUILD_DIR}/tar/builds/opensearch-dashboards/manifest.yml"
+      # assemble distribution and plugins
+      manifest="${BASE_BUILD_DIR}/tar/builds/opensearch-dashboards/manifest.yml"
 
-            cmd="pushd ${BASE_BUILD_DIR}/ && cat ${manifest} && popd"
-            su -c "${cmd}" opensearch
+      cmd="pushd ${BASE_BUILD_DIR}/ && cat ${manifest} && popd"
+      su -c "${cmd}" opensearch
 
-            cmd="pushd ${BASE_BUILD_DIR}/ && bash assemble.sh ${manifest} && popd"
-            su -c "${cmd}" opensearch
+      cmd="pushd ${BASE_BUILD_DIR}/ && bash assemble.sh ${manifest} && popd"
+      su -c "${cmd}" opensearch
 
-    release:
-        series: noble
-        architectures:
-            - amd64
-            - arm64
-        environment:
-            PATCH_NUMBER: 0
-            OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
-            BASE_BUILD_DIR: /home/opensearch/opensearch-build
-            NO_PROXY: localhost
-            HTTPS_PROXY: 10.10.10.1:8222
-            HTTP_PROXY: 10.10.10.1:8222
-        run: |-
-            ARCH=$(dpkg --print-architecture)
-            [[ "$ARCH" == "amd64" ]] && ARCH="x64"
+  release:
+    series: noble
+    architectures:
+      - amd64
+      - arm64
+    environment:
+      PATCH_NUMBER: 0
+      OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
+      BASE_BUILD_DIR: /home/opensearch/opensearch-build
+      NO_PROXY: localhost
+      HTTPS_PROXY: 10.10.10.1:8222
+      HTTP_PROXY: 10.10.10.1:8222
+    run: |-
+      ARCH=$(dpkg --print-architecture)
+      [[ "$ARCH" == "amd64" ]] && ARCH="x64"
 
-            echo -e "\n\n\n\n##################################\n\n\n\n"
-            echo -e "\nPublish the OpenSearch Dashboards Tarball to Launchpad."
+      echo -e "\n\n\n\n##################################\n\n\n\n"
+      echo -e "\nPublish the OpenSearch Dashboards Tarball to Launchpad."
 
-            timestamp="$(date +"%Y%m%d%H%M%S")"
-            tarball="opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}-ubuntu${PATCH_NUMBER}-${timestamp}-linux-${ARCH}.tar.gz"
+      timestamp="$(date +"%Y%m%d%H%M%S")"
+      tarball="opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}-ubuntu${PATCH_NUMBER}-${timestamp}-linux-${ARCH}.tar.gz"
 
-            # copy the tarball to the launchpad build directory
-            cp "${BASE_BUILD_DIR}/tar/dist/opensearch-dashboards/opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}-linux-${ARCH}.tar.gz" ./"${tarball}"
+      # copy the tarball to the launchpad build directory
+      cp "${BASE_BUILD_DIR}/tar/dist/opensearch-dashboards/opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}-linux-${ARCH}.tar.gz" ./"${tarball}"
 
-            # compute the checksum
-            sha512sum "${tarball}" > "${tarball}.sha512"
+      # compute the checksum
+      sha512sum "${tarball}" > "${tarball}.sha512"
 
-        output:
-            paths:
-                - opensearch-dashboards-*-linux-*.tar.gz
-                - opensearch-dashboards-*-linux-*.tar.gz.sha512
+    output:
+      paths:
+        - opensearch-dashboards-*-linux-*.tar.gz
+        - opensearch-dashboards-*-linux-*.tar.gz.sha512
