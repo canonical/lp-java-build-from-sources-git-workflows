@@ -12,6 +12,7 @@ jobs:
       - arm64
     environment:
       BASE_BUILD_DIR: /home/opensearch/opensearch-build
+      NVM_DIR: /opt/nvm
     package-repositories:
       - type: apt
         ppa: smethnani/python3-jproperties
@@ -48,8 +49,8 @@ jobs:
       id -u opensearch >/dev/null 2>&1 || adduser -uid 1000 -gid 1000 --disabled-password --gecos "" opensearch
 
       # create dummy nvm which does nothing (opensearch-dashboards build scripts expect nvm)
-      mkdir -p /opt/nvm
-      echo 'nvm() { true; }' > /opt/nvm/nvm.sh
+      mkdir -p "$NVM_DIR"
+      echo 'nvm() { true; }' > "$NVM_DIR/nvm.sh"
       chown -R opensearch:opensearch "${PWD}"
 
       # create opensearch-build
@@ -68,10 +69,10 @@ jobs:
       OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
       BASE_BUILD_DIR: /home/opensearch/opensearch-build
       NVM_DIR: /opt/nvm
+      NODE_DIST_URL: "https://canonical.jfrog.io/artifactory/dataplatform-generic-stable-local/node"
       NO_PROXY: localhost
       HTTPS_PROXY: 10.10.10.1:8222
       HTTP_PROXY: 10.10.10.1:8222
-      PROXYHOST: 10.10.10.1:8222
     run: |-
       echo -e "\n\n\n\n##################################\n\n\n\n"
       echo -e "\nBuilding OpenSearch Dashboards & Plugins..."

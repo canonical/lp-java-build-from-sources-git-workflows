@@ -1,12 +1,3 @@
-From 09a3e0dd226ce41deeb78b3a25189c1012483e99 Mon Sep 17 00:00:00 2001
-From: smethnani <82812166+smethnani@users.noreply.github.com>
-Date: Sun, 30 Nov 2025 21:34:15 +0000
-Subject: [PATCH] Get trained data from jfrog
-
----
- scripts/postinstall.js | 56 ++++++++++++++++++++++++++++++++++++------
- 1 file changed, 49 insertions(+), 7 deletions(-)
-
 diff --git a/scripts/postinstall.js b/scripts/postinstall.js
 index 1e53f1c..a7aa36a 100644
 --- a/scripts/postinstall.js
@@ -84,6 +75,3 @@ index 1e53f1c..a7aa36a 100644
 +  .catch((err) => {
 +    console.error('Download failed:', err.message);
 +  });
--- 
-2.49.0
-

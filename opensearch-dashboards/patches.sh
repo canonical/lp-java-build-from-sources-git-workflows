@@ -2,24 +2,28 @@
 
 PATCHES_DIR="${PRODUCT_DIR}/patches"
 
+apply_patch() {
+    local patch="$1"
+    local msg="${2:-Patch: $(basename "$patch")}"
+    if git apply --check --reverse "$patch" 2>/dev/null; then
+        echo "Patch $(basename "$patch") already applied"
+        return 0
+    fi
+
+    git apply "$patch"
+    git add -A
+    git commit -m "$msg"
+}
+
 apply_patches() {
     local repo="$1"
 
-    git am --abort 2>/dev/null || true
-
     case "$repo" in
         opensearch-dashboards)
-            grep -q "ARTIFACTORY_URL" src/dev/build/tasks/nodejs/node_download_info.ts && return 0
-
-            case "$VERSION" in
-                2*) git am --3way -C1 "$PATCHES_DIR/opensearch-dashboards-2.x.patch" ;;
-                *)  git am --3way -C1 "$PATCHES_DIR/opensearch-dashboards-3.x.patch" ;;
-            esac
+            apply_patch "$PATCHES_DIR/opensearch-dashboards.patch" "Download node from artifactory"
             ;;
         dashboards-reporting)
-            grep -q "canonical.jfrog.io" scripts/postinstall.js 2>/dev/null && return 0
-
-            git am --3way -C1 "$PATCHES_DIR/dashboards-reporting.patch"
+            apply_patch "$PATCHES_DIR/reporting.patch" "Get trained data from jfrog"
             ;;
     esac
 
