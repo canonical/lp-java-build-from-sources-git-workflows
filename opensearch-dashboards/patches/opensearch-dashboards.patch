@@ -24,7 +24,7 @@ diff --git a/src/dev/build/lib/download.ts b/src/dev/build/lib/download.ts
  export async function download(options: DownloadOptions): Promise<void> {
    const { log, url, destination, sha256, retries = 0 } = options;
 
-+  const extraOptions = process.env.NODE_DIST_URL && url.startsWith(process.env.NODE_DIST_URL)
++  const extraOptions = process.env.ARTIFACTORY_URL && url.startsWith(process.env.ARTIFACTORY_URL)
 +    ? extraLaunchpadOptions()
 +    : {};
 +
@@ -45,10 +45,10 @@ new file mode 100644
 +import { HttpsProxyAgent } from 'https-proxy-agent';
 +
 +export function extraLaunchpadOptions() {
-+  const proxyEnv = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
++  const proxyEnv = process.env.https_proxy || process.env.http_proxy;
 +
 +  if (!proxyEnv) {
-+    throw new Error('Missing HTTPS_PROXY or HTTP_PROXY environment variable.');
++    throw new Error('Missing https_proxy or http_proxy environment variable.');
 +  }
 +
 +  if (!process.env.ARTIFACTORY_USER) {
@@ -63,7 +63,7 @@ new file mode 100644
 +    ? proxyEnv
 +    : `http://${proxyEnv}`;
 +
-+  console.log(`HTTPS proxy is set to: ${proxyUrl}`);
++  console.log(`Proxy is set to: ${proxyUrl}`);
 +  const proxyAgent = new HttpsProxyAgent(proxyUrl);
 +
 +  const auth = `${process.env.ARTIFACTORY_USER}:${process.env.ARTIFACTORY_PASSWORD}`;
@@ -89,11 +89,13 @@ diff --git a/src/dev/build/lib/index.ts b/src/dev/build/lib/index.ts
 diff --git a/src/dev/build/tasks/nodejs/node_download_info.ts b/src/dev/build/tasks/nodejs/node_download_info.ts
 --- a/src/dev/build/tasks/nodejs/node_download_info.ts
 +++ b/src/dev/build/tasks/nodejs/node_download_info.ts
-@@ -35,5 +35,7 @@ import semver from 'semver';
+@@ -35,5 +35,9 @@ import semver from 'semver';
 
  import { Config, Platform } from '../../lib';
 
-+const NODE_DIST_URL = process.env.NODE_DIST_URL || 'https://nodejs.org/dist';
++const NODE_DIST_URL = process.env.ARTIFACTORY_URL
++  ? `${process.env.ARTIFACTORY_URL}/node`
++  : 'https://nodejs.org/dist';
 +
  const NODE_RANGE_CACHE: { [key: string]: string } = {};
 
@@ -118,13 +120,15 @@ diff --git a/src/dev/build/tasks/nodejs/node_download_info.ts b/src/dev/build/ta
 diff --git a/src/dev/build/tasks/nodejs/node_shasums.ts b/src/dev/build/tasks/nodejs/node_shasums.ts
 --- a/src/dev/build/tasks/nodejs/node_shasums.ts
 +++ b/src/dev/build/tasks/nodejs/node_shasums.ts
-@@ -31,12 +31,16 @@
+@@ -31,12 +31,18 @@
  import axios from 'axios';
  import { ToolingLog } from '@osd/dev-utils';
 
 +import { extraLaunchpadOptions } from '../../lib';
 +
-+const NODE_DIST_URL = process.env.NODE_DIST_URL || 'https://nodejs.org/dist';
++const NODE_DIST_URL = process.env.ARTIFACTORY_URL
++  ? `${process.env.ARTIFACTORY_URL}/node`
++  : 'https://nodejs.org/dist';
 +
  export async function getNodeShasums(log: ToolingLog, nodeVersion: string) {
 -  const url = `https://nodejs.org/dist/v${nodeVersion}/SHASUMS256.txt`;
@@ -133,7 +137,7 @@ diff --git a/src/dev/build/tasks/nodejs/node_shasums.ts b/src/dev/build/tasks/no
    log.debug('Downloading shasum values for node version', nodeVersion, 'from', url);
 
 -  const { status, data } = await axios.get(url);
-+  const { status, data } = await axios.get(url, process.env.NODE_DIST_URL ? extraLaunchpadOptions() : {});
++  const { status, data } = await axios.get(url, process.env.ARTIFACTORY_URL ? extraLaunchpadOptions() : {});
 
    if (status !== 200) {
      throw new Error(`${url} failed with a ${status} response`);

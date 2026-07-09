@@ -67,12 +67,12 @@ jobs:
       - arm64
     environment:
       OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
+      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-generic-stable-local"
       BASE_BUILD_DIR: /home/opensearch/opensearch-build
       NVM_DIR: /opt/nvm
-      NODE_DIST_URL: "https://canonical.jfrog.io/artifactory/dataplatform-generic-stable-local/node"
-      NO_PROXY: localhost
-      HTTPS_PROXY: 10.10.10.1:8222
-      HTTP_PROXY: 10.10.10.1:8222
+      no_proxy: localhost
+      https_proxy: 10.10.10.1:8222
+      http_proxy: 10.10.10.1:8222
     run: |-
       echo -e "\n\n\n\n##################################\n\n\n\n"
       echo -e "\nBuilding OpenSearch Dashboards & Plugins..."
@@ -80,8 +80,8 @@ jobs:
       export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
       export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
 
-      su -c "yarn config set proxy http://${HTTP_PROXY}" opensearch
-      su -c "yarn config set https-proxy http://${HTTP_PROXY}" opensearch
+      su -c "yarn config set proxy http://${http_proxy}" opensearch
+      su -c "yarn config set https-proxy http://${http_proxy}" opensearch
 
       manifest="${BASE_BUILD_DIR}/manifests/${OPENSEARCH_DASHBOARDS_VERSION}/opensearch-dashboards-${OPENSEARCH_DASHBOARDS_VERSION}.yml"
       cmd="pushd '${BASE_BUILD_DIR}' && bash build.sh '${manifest}' && popd"
@@ -95,9 +95,9 @@ jobs:
     environment:
       OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
       BASE_BUILD_DIR: /home/opensearch/opensearch-build
-      NO_PROXY: localhost
-      HTTPS_PROXY: 10.10.10.1:8222
-      HTTP_PROXY: 10.10.10.1:8222
+      no_proxy: localhost
+      https_proxy: 10.10.10.1:8222
+      http_proxy: 10.10.10.1:8222
     run: |-
       echo -e "\n\n\n\n##################################\n\n\n\n"
       echo -e "\nAssembling OpenSearch Dashboards Distribution..."
@@ -122,9 +122,9 @@ jobs:
       PATCH_NUMBER: 0
       OPENSEARCH_DASHBOARDS_VERSION: ${VERSION}
       BASE_BUILD_DIR: /home/opensearch/opensearch-build
-      NO_PROXY: localhost
-      HTTPS_PROXY: 10.10.10.1:8222
-      HTTP_PROXY: 10.10.10.1:8222
+      no_proxy: localhost
+      https_proxy: 10.10.10.1:8222
+      http_proxy: 10.10.10.1:8222
     run: |-
       ARCH=$(dpkg --print-architecture)
       [[ "$ARCH" == "amd64" ]] && ARCH="x64"

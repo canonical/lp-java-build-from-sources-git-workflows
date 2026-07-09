@@ -14,7 +14,7 @@ index 1e53f1c..a7aa36a 100644
  
  const options = {
    files: [
-@@ -35,14 +36,53 @@ try {
+@@ -35,14 +36,55 @@ try {
  }
  
  // download tesseract model
@@ -24,12 +24,13 @@ index 1e53f1c..a7aa36a 100644
 -  function (response) {
 -    response.pipe(modelFile);
 +const proxyOptions = {};
-+if (process.env.PROXYHOST) {
-+  const proxyUrl = process.env.PROXYHOST.startsWith('http')
-+    ? process.env.PROXYHOST
-+    : `http://${process.env.PROXYHOST}`;
++const proxyEnv = process.env.https_proxy || process.env.http_proxy;
++if (proxyEnv) {
++  const proxyUrl = proxyEnv.startsWith('http')
++    ? proxyEnv
++    : `http://${proxyEnv}`;
 +
-+  console.log(`HTTPS proxy is set to: ${proxyUrl}`);
++  console.log(`Proxy is set to: ${proxyUrl}`);
 +  const proxyAgent = new HttpsProxyAgent(proxyUrl);
 +  proxyOptions.httpsAgent = proxyAgent;
 +}
@@ -45,8 +46,9 @@ index 1e53f1c..a7aa36a 100644
 +const auth = `${ARTIFACTORY_USER}:${ARTIFACTORY_PASSWORD}`;
 +const encodedAuth = Buffer.from(auth).toString('base64');
 +
-+const url =
-+  'https://canonical.jfrog.io/artifactory/dataplatform-generic-stable-local/tessdata/eng.traineddata.gz';
++const url = process.env.ARTIFACTORY_URL
++  ? `${process.env.ARTIFACTORY_URL}/tessdata/eng.traineddata.gz`
++  : 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/eng.traineddata.gz';
 +const outputFile = __dirname + '/../common/tesseract/eng.traineddata.gz';
 +
 +axios

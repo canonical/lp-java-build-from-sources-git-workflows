@@ -1,7 +1,7 @@
 export VERSION=""
 export LP_USERNAME=""
 export PREFIX="lp"
-export JFROG_URL="canonical.jfrog.io/artifactory/dataplatform-generic-stable-local/gradle"
+export GRADLE_DIST_URL="canonical.jfrog.io/artifactory/dataplatform-generic-stable-local/gradle"
 export ARTIFACTORY_URL="https://canonical.jfrog.io/artifactory/dataplatform-opensearch-staging"
 
 export LP_SOSS_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/soss/+source"
@@ -14,6 +14,7 @@ echo
 
 # git ref for opensearch-build (if version tag is missing, add specific commit here)
 case "$VERSION" in
-    3.7.0) export VERSION_REF="6d305d48a5493c907b1c17aae161b9b3dbcacdf2" ;;
+    # e.g.
+    # 3.7.0) export VERSION_REF="6d305d48a5493c907b1c17aae161b9b3dbcacdf2" ;;
     *)     export VERSION_REF="$VERSION" ;;
 esac
