@@ -82,7 +82,7 @@ jobs:
       - arm64
     environment:
       OPENSEARCH_VERSION: ${VERSION}
-      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch"
+      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch-staging"
       BASE_BUILD_DIR: /home/opensearch/opensearch-build
       no_proxy: localhost
       https_proxy: 10.10.10.1:8222
@@ -127,7 +127,7 @@ jobs:
       - arm64
     environment:
       OPENSEARCH_VERSION: ${VERSION}
-      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch"
+      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch-staging"
       BASE_BUILD_DIR: /home/opensearch/opensearch-build
       no_proxy: localhost
       https_proxy: 10.10.10.1:8222
@@ -181,7 +181,7 @@ jobs:
       - arm64
     environment:
       OPENSEARCH_VERSION: ${VERSION}
-      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch"
+      ARTIFACTORY_URL: "https://canonical.jfrog.io/artifactory/dataplatform-opensearch-staging"
       BASE_BUILD_DIR: /home/opensearch/opensearch-build
       no_proxy: localhost
       https_proxy: 10.10.10.1:8222

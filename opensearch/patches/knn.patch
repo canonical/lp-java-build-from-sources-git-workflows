@@ -2,14 +2,13 @@ diff --git a/build.gradle b/build.gradle
 index 94719482..7f6a8514 100644
 --- a/build.gradle
 +++ b/build.gradle
-@@ -545,6 +545,10 @@ tasks.register('cmakeJniLib', Exec) {
+@@ -545,4 +545,9 @@ tasks.register('cmakeJniLib', Exec) {
          args.add("-DBLAS_LIBRARIES=$rootDir\\src\\main\\resources\\windowsDependencies\\libopenblas.dll")
          args.add("-DLAPACK_LIBRARIES=$rootDir\\src\\main\\resources\\windowsDependencies\\libopenblas.dll")
      }
++
 +    if (System.getProperty("os.arch") == "aarch64") {
 +        args.add("-DBLAS_LIBRARIES=/usr/lib/aarch64-linux-gnu/openblas-pthread/libopenblas.a;gfortran;m;pthread")
 +        args.add("-DLAPACK_LIBRARIES=/usr/lib/aarch64-linux-gnu/openblas-pthread/libopenblas.a")
 +    }
  
-     // Print the command that will be executed
-     logger.lifecycle("CMake command: ${args.join(' ')}")

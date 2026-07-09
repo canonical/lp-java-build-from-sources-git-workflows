@@ -17,9 +17,9 @@ patch_gradle() {
     local wrapper="gradle/wrapper/gradle-wrapper.properties"
     [[ -f "notifications/$wrapper" ]] && wrapper="notifications/$wrapper"
 
-    grep -q "$JFROG_URL" "$wrapper" && return 0
+    grep -q "$GRADLE_DIST_URL" "$wrapper" && return 0
 
-    sed -i.tmp "s|services.gradle.org/distributions|${JFROG_URL}|g" "$wrapper"
+    sed -i.tmp "s|services.gradle.org/distributions|${GRADLE_DIST_URL}|g" "$wrapper"
     rm -f "${wrapper}.tmp"
     git add "$wrapper"
     git commit -m "Change Gradle distro url"
@@ -32,6 +32,7 @@ patch_spotless() {
 
     # return if no spotless files to patch
     [[ -z "$files" ]] && return 0
+    grep -q "withP2Mirrors" $files 2>/dev/null || return 0
 
     for f in $files; do
         grep -q "withP2Mirrors" "$f" 2>/dev/null || continue
@@ -39,7 +40,7 @@ patch_spotless() {
         rm -f "${f}.tmp"
         git add "$f"
     done
-    git commit -m "Remove broken mirror from Spotless config"
+    git diff --cached --quiet || git commit -m "Remove broken mirror from Spotless config"
 }
 
 patch_knn() {
@@ -72,7 +73,7 @@ patch_performance_analyzer() {
         build.gradle
     rm -f build.gradle.tmp
     git add build.gradle
-    git commit -m "Update LP remote RCA"
+    git diff --cached --quiet || git commit -m "Update LP remote RCA"
 }
 
 patch_security_analytics() {
@@ -81,7 +82,7 @@ patch_security_analytics() {
 
     git apply "${PATCHES_DIR}/security-analytics.patch"
     git add build.gradle
-    git commit -m "Fix alerting-spi snapshot version"
+    git diff --cached --quiet || git commit -m "Fix alerting-spi snapshot version"
 }
 
 patch_alerting() {
@@ -90,27 +91,42 @@ patch_alerting() {
 
     git apply "${PATCHES_DIR}/alerting.patch"
     git add build.gradle
-    git commit -m "Fix ktlint beforeResolve"
+    git diff --cached --quiet || git commit -m "Fix ktlint beforeResolve"
 }
 
 patch_prometheus_exporter() {
-    grep -q "^opensearch_version.*-SNAPSHOT" gradle.properties || return 0
-
-    sed -i.tmp '/^opensearch_version/s/-SNAPSHOT//' gradle.properties
+    if grep -q "^opensearch_version.*-SNAPSHOT" gradle.properties; then
+        sed -i.tmp '/^opensearch_version/s/-SNAPSHOT//' gradle.properties
+        rm -f gradle.properties.tmp
+        git add gradle.properties
+        git commit -m "Remove snapshot from version"
+    fi
+    # add a publish task (3.6.0+ has this but still needed in 2.19.x)
+    if ! grep -q "pluginZip(MavenPublication)" build.gradle; then
+        git apply "${PATCHES_DIR}/prometheus-publishing.patch"
+        git add build.gradle
+        git commit -m "Add pluginZip publishing for maven local"
+    fi
+    # uncomment group if commented, or add it
+    sed -i.tmp 's/^#group = org.opensearch.plugin.prometheus/group = org.opensearch.plugin.prometheus/' gradle.properties
     rm -f gradle.properties.tmp
+    if ! grep -q "^group = org.opensearch.plugin.prometheus" gradle.properties; then
+        echo "group = org.opensearch.plugin.prometheus" >> gradle.properties
+    fi
     git add gradle.properties
-    git commit -m "Remove snapshot from version"
+    git diff --cached --quiet || git commit -m "Add group for maven publishing"
 }
 
 patch_reporting() {
     grep -q "git.launchpad.net" build.gradle && return 0
 
+    # replace with lp urls
     sed -i.tmp \
         -e "s|\"https://raw.githubusercontent.com/opensearch-project/security/refs/heads/main/bwc-test/src/test/resources/security/\" + file|\"https://git.launchpad.net/~data-platform/opensearch-project-components/+git/opensearch-security/plain/bwc-test/src/test/resources/security/\${file}?h=${PREFIX}-${VERSION}\"|" \
         build.gradle
     rm -f build.gradle.tmp
     git add build.gradle
-    git commit -m "Replace cert download urls"
+    git diff --cached --quiet || git commit -m "Replace cert download urls"
 }
 
 apply_patches() {

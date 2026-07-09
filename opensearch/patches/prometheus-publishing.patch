@@ -1,0 +1,36 @@
+diff --git a/build.gradle b/build.gradle
+index bcde8b0..e53d54f 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -75,3 +75,31 @@ def pluginDescription = pluginDescription
+ //def pathToPlugin = 'path.to.plugin'
+ def pluginClassName = pluginClassname
++
++configurations {
++    zipArchive
++}
++
++apply plugin: 'opensearch.pluginzip'
++publishing {
++    publications {
++        pluginZip(MavenPublication) { publication ->
++            pom {
++                name = pluginName
++                description = pluginDescription
++                licenses {
++                    license {
++                        name = "The Apache License, Version 2.0"
++                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
++                    }
++                }
++                developers {
++                    developer {
++                        name = "OpenSearch"
++                        url = "https://github.com/opensearch-project/opensearch-prometheus-exporter"
++                    }
++                }
++            }
++        }
++    }
++}
+
