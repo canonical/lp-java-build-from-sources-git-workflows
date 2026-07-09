@@ -89,20 +89,36 @@ jobs:
       http_proxy: 10.10.10.1:8222
       _JAVA_OPTIONS: '-Dhttp.proxyHost=10.10.10.1 -Dhttp.proxyPort=8222 -Dhttps.proxyHost=10.10.10.1 -Dhttps.proxyPort=8222 -Dhttp.nonProxyHosts=localhost'
     run: |-
+      set -o pipefail
+
       ARCH=$(dpkg --print-architecture)
       export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-${ARCH}
 
       echo -e "\n\n\n\n##################################\n\n\n\n"
       echo -e "\nBuilding OpenSearch & Plugins..."
 
-      # Set artifactory gradle wrapper credentials for downloading dependencies, plugins and the gradle distros from artifactory 
+      # we occasionally hit 500 server unavailable errors that could be retried
+      retry() {
+        local logfile=/tmp/build-output.log
+        for attempt in 1 2 3; do
+          "$@" 2>&1 | tee "$logfile" && return 0
+          grep -qiE 'status code 50[0-4]|Internal Server Error|Service Unavailable' "$logfile" || return 1
+          if [ "$attempt" -lt 3 ]; then
+            echo "(attempt $attempt) Server unavailable error, retrying in 30s..."
+            sleep 30
+          fi
+        done
+        return 1
+      }
+
+      # Set artifactory gradle wrapper credentials for downloading dependencies, plugins and the gradle distros from artifactory
       export ARTIFACTORY_USER="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $1}')"
       export ARTIFACTORY_PASSWORD="$(echo "${PIP_INDEX_URL#https://}" | awk -F '@' '{print $1}' | awk -F ':' '{print $2}')"
       export GRADLE_OPTS="-Dgradle.wrapperUser=${ARTIFACTORY_USER} -Dgradle.wrapperPassword=${ARTIFACTORY_PASSWORD}"
 
       manifest="${BASE_BUILD_DIR}/manifests/${OPENSEARCH_VERSION}/opensearch-${OPENSEARCH_VERSION}.yml"
       cmd="pushd ${BASE_BUILD_DIR}/ && bash build.sh "${manifest}" && popd"
-      su -c "${cmd}" opensearch
+      retry su -c "${cmd}" opensearch
 
   assemble:
     series: noble
