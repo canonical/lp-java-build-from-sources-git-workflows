@@ -43,16 +43,10 @@ tasks:
   opensearch:all:
     desc: "OpenSearch: full workflow"
     cmds:
-      - task: opensearch:parse-manifest
-      - task: opensearch:update-submodules
       - task: opensearch:clone
       - task: opensearch:patch
+      - task: opensearch:update-submodules
       - task: opensearch:push
-
-  opensearch:parse-manifest:
-    desc: "OpenSearch: read manifest and write repos.txt"
-    cmds:
-      - ". ./config.sh && python3 ./scripts/parse_manifest.py opensearch"
 
   opensearch:update-submodules:
     desc: "OpenSearch: clone and push knn submodules"
@@ -62,17 +56,17 @@ tasks:
   opensearch:clone:
     desc: "OpenSearch: clone all repos, create LP branches and tags"
     cmds:
-      - "bash ./scripts/1-clone.sh opensearch"
+      - "bash ./scripts/clone.sh opensearch"
 
   opensearch:patch:
     desc: "OpenSearch: apply patches"
     cmds:
-      - "bash ./scripts/2-patch.sh opensearch"
+      - "bash ./scripts/patch.sh opensearch"
 
   opensearch:push:
     desc: "OpenSearch: push branches and tags to Launchpad"
     cmds:
-      - "bash ./scripts/3-push.sh opensearch"
+      - "bash ./scripts/push.sh opensearch"
 
   opensearch:update-manifest:
     desc: "OpenSearch: update manifest URLs"
@@ -87,30 +81,24 @@ tasks:
   dashboards:all:
     desc: "Dashboards: full workflow"
     cmds:
-      - task: dashboards:parse-manifest
       - task: dashboards:clone
       - task: dashboards:patch
       - task: dashboards:push
 
-  dashboards:parse-manifest:
-    desc: "Dashboards: read manifest and write repos.txt"
-    cmds:
-      - ". ./config.sh && python3 ./scripts/parse_manifest.py opensearch-dashboards"
-
   dashboards:clone:
     desc: "Dashboards: clone all repos, create LP branches and tags"
     cmds:
-      - "bash ./scripts/1-clone.sh opensearch-dashboards"
+      - "bash ./scripts/clone.sh opensearch-dashboards"
 
   dashboards:patch:
     desc: "Dashboards: apply patches"
     cmds:
-      - "bash ./scripts/2-patch.sh opensearch-dashboards"
+      - "bash ./scripts/patch.sh opensearch-dashboards"
 
   dashboards:push:
     desc: "Dashboards: push branches and tags to Launchpad"
     cmds:
-      - "bash ./scripts/3-push.sh opensearch-dashboards"
+      - "bash ./scripts/push.sh opensearch-dashboards"
 
   dashboards:update-manifest:
     desc: "Dashboards: update manifest URLs"

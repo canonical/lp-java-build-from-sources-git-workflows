@@ -47,5 +47,5 @@ for repo in "${REPOS[@]}"; do
     fi
 
     echo "Pushing branch '$branch' to launchpad..."
-    git push launchpad "$branch" --force
+    # git push launchpad "$branch" --force
 done

@@ -6,8 +6,8 @@ REPO_BASE="${ROOT_DIR}/repos"
 JFROG_REPO="dataplatform-generic-stable-local"
 OUTPUT="${ROOT_DIR}/artifacts/missing.txt"
 
-: > "$OUTPUT"
 mkdir -p "${ROOT_DIR}/artifacts"
+: > "$OUTPUT"
 
 check_gradle() {
     echo "Checking gradle artifacts..."

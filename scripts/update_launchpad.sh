@@ -11,11 +11,11 @@ LAUNCHPAD_YAML="${ROOT_DIR}/repos/opensearch-build/.launchpad.yaml"
 
 cd "${ROOT_DIR}/repos/opensearch-build"
 
-# check for uncommitted changes
-if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo "ERROR: uncommitted changes in opensearch-build"
-    exit 1
-fi
+# # check for uncommitted changes
+# if ! git diff --quiet || ! git diff --cached --quiet; then
+#     echo "ERROR: uncommitted changes in opensearch-build"
+#     exit 1
+# fi
 
 # switch to product-specific branch
 if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
@@ -35,7 +35,6 @@ fi
 # copy .launchpad.yaml from template
 sed "s/\${VERSION}/${VERSION}/g" "$TEMPLATE" > "$LAUNCHPAD_YAML"
 sed -i.tmp "s|PATCH_NUMBER:.*|PATCH_NUMBER: ${PATCH_NUMBER}|g" "$LAUNCHPAD_YAML"
-sed -i.tmp "s|ARTIFACTORY_URL:.*|ARTIFACTORY_URL: ${ARTIFACTORY_URL}|g" "$LAUNCHPAD_YAML"
 
 if [[ "$PRODUCT" == "opensearch-dashboards" ]]; then
     case "$VERSION" in

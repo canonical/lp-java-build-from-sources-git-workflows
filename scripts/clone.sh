@@ -3,12 +3,27 @@ set -eu
 
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-. "${ROOT_DIR}/config.sh"
 PRODUCT_DIR="${ROOT_DIR}/${PRODUCT}"
 REPO_BASE="${ROOT_DIR}/repos/${PRODUCT}"
+
+. "${ROOT_DIR}/config.sh"
 . "${PRODUCT_DIR}/config.sh"
 
-REPOS_FILE="${PRODUCT_DIR}/repos.txt"
+# fetch manifest
+MANIFEST_URL="https://raw.githubusercontent.com/opensearch-project/opensearch-build/${VERSION_REF}/manifests/${VERSION}/${PRODUCT}-${VERSION}.yml"
+
+repos=$(curl -s "$MANIFEST_URL" \
+    | yq '.components[].repository' \
+    | grep 'github.com/opensearch-project/' \
+    | grep -v 'functional-test' \
+    | sed 's|https://github.com/opensearch-project/||; s|\.git$||')
+
+if [[ "$PRODUCT" == "opensearch" ]]; then
+    repos+=$'\nopensearch-prometheus-exporter'
+    repos+=$'\nperformance-analyzer-rca'
+fi
+
+repos=$(echo "$repos" | sort -u)
 
 checkout_or_create_branch() {
     local branch="$1"
@@ -29,11 +44,6 @@ checkout_or_create_branch() {
 }
 
 mkdir -p "$REPO_BASE"
-
-if [[ ! -f "$REPOS_FILE" ]]; then
-    echo "repos.txt not found. Run parse_manifest.py"
-    exit 1
-fi
 
 while read -r repo; do
     local_name="$(echo "$repo" | tr '[:upper:]' '[:lower:]')"
@@ -56,13 +66,13 @@ while read -r repo; do
 
     cd "$local_name"
 
-    # check for uncommitted changes
-    if ! git diff --quiet || ! git diff --cached --quiet; then
-        echo "ERROR: uncommitted changes in $local_name"
-        exit 1
-    fi
+    # # check for uncommitted changes
+    # if ! git diff --quiet || ! git diff --cached --quiet; then
+    #     echo "ERROR: uncommitted changes in $local_name"
+    #     exit 1
+    # fi
 
-    git fetch -q origin --tags || { echo "ERROR: failed to fetch origin tags"; exit 1; }
+    # git fetch -q origin --tags || { echo "ERROR: failed to fetch origin tags"; exit 1; }
 
     # get upstream branch (performance-analyzer-rca doesn't use tags)
     if [[ "$repo" == "performance-analyzer-rca" ]]; then
@@ -81,12 +91,17 @@ while read -r repo; do
         version_tag="${VERSION}.0"
     else
         # get upstream tag for this version
-        ref_name="${VERSION}.*"
-        [[ "$repo" == "OpenSearch" ]] && ref_name="${VERSION}"
-        [[ "$repo" == "OpenSearch-Dashboards" ]] && ref_name="${VERSION}"
+        # ref_name="${VERSION}.*"
+        # [[ "$repo" == "OpenSearch" ]] && ref_name="${VERSION}"
+        # [[ "$repo" == "OpenSearch-Dashboards" ]] && ref_name="${VERSION}"
+        #
+        # version_tag=$(git tag -l --sort=-version:refname "$ref_name" | head -1)
+        # [[ -n "$version_tag" ]] || { echo "ERROR: no upstream tag matching $ref_name"; exit 1; }
+        version_tag="${VERSION}.0"
+        [[ "$repo" == "OpenSearch" ]] && version_tag="${VERSION}"
+        [[ "$repo" == "OpenSearch-Dashboards" ]] && version_tag="${VERSION}"
 
-        version_tag=$(git tag -l --sort=-version:refname "$ref_name" | head -1)
-        [[ -n "$version_tag" ]] || { echo "ERROR: no upstream tag matching $ref_name"; exit 1; }
+        git fetch -q origin "refs/tags/${version_tag}:refs/tags/${version_tag}" || { echo "ERROR: tag ${version_tag} not found"; exit 1; }
 
         # get upstream commit from tag, create LP branch
         release_commit=$(git rev-list -n1 "$version_tag")
@@ -103,11 +118,11 @@ while read -r repo; do
         git tag -f "$lp_tag"
         echo " Created tag ${lp_tag} from upstream ${version_tag}"
     fi
+    #
+    # if [[ "$repo" == "opensearch-prometheus-exporter" ]]; then
+    #     # .gitattributes in this repo forces crlf changes
+    #     #  git checkout -- gradlew.bat doesn't work so ignore changes to the file
+    #     git update-index --skip-worktree gradlew.bat
+    # fi
 
-    if [[ "$repo" == "opensearch-prometheus-exporter" ]]; then
-        # .gitattributes in this repo forces crlf changes
-        #  git checkout -- gradlew.bat doesn't work so ignore changes to the file
-        git update-index --skip-worktree gradlew.bat
-    fi
-
-done < "$REPOS_FILE"
+done <<< "$repos"

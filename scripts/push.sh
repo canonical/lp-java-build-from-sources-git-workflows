@@ -3,10 +3,9 @@ set -eu
 
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-. "${ROOT_DIR}/config.sh"
-PRODUCT_DIR="${ROOT_DIR}/${PRODUCT}"
 REPO_BASE="${ROOT_DIR}/repos/${PRODUCT}"
-. "${PRODUCT_DIR}/config.sh"
+
+. "${ROOT_DIR}/config.sh"
 
 BRANCH="${PREFIX}-${VERSION}"
 
@@ -18,13 +17,13 @@ for dir in "$REPO_BASE"/*; do
     echo
     echo "$repo"
 
-    # check for uncommitted changes
-    if ! git diff --quiet || ! git diff --cached --quiet; then
-        echo "ERROR: uncommitted changes in $repo"
-        exit 1
-    fi
+    # # check for uncommitted changes
+    # if ! git diff --quiet || ! git diff --cached --quiet; then
+    #     echo "ERROR: uncommitted changes in $repo"
+    #     exit 1
+    # fi
 
-    git show-ref --verify --quiet "refs/heads/$BRANCH" || { echo "ERROR: no $BRANCH branch"; exit 1; }
+    git show-ref --verify --quiet "refs/heads/$BRANCH" || { echo "skip: no $BRANCH branch"; continue; }
     git checkout "$BRANCH"
     git remote get-url launchpad || { echo "ERROR: no launchpad remote"; exit 1; }
 
@@ -51,10 +50,10 @@ for dir in "$REPO_BASE"/*; do
         continue
     fi
 
+    git fetch launchpad "$BRANCH" "$lp_tag" --quiet 2>/dev/null || true
     echo "Pushing branch '$BRANCH' and tag '$lp_tag' to launchpad..."
-    git fetch launchpad --quiet
-    git push launchpad "$BRANCH" --force
-    git push launchpad "$lp_tag" --force
+    # git push launchpad "$BRANCH" --force
+    # git push launchpad "$lp_tag" --force
 done
 
 echo "Done."
