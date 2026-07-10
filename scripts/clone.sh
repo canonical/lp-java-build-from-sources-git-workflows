@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu
 
+command -v yq >/dev/null || { echo "yq is required"; exit 1; }
+
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PRODUCT_DIR="${ROOT_DIR}/${PRODUCT}"

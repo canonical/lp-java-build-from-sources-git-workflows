@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu
 
+command -v jf >/dev/null || { echo "jf is required. See https://jfrog.com/getcli/"; exit 1; }
+
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_BASE="${ROOT_DIR}/repos"
 JFROG_REPO="dataplatform-generic-stable-local"
