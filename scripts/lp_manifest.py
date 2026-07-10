@@ -21,7 +21,7 @@ yaml.preserve_quotes = True
 data = yaml.load(manifest_path)
 
 # remove functionTest component from dashboards (remove this if enabling dashboards tests)
-data["components"] = [c for c in data["components"] if c["name"] != "functionalTest"]
+data["components"] = [c for c in data["components"] if not c["name"].startswith("functionalTest")]
 
 for comp in data["components"]:
     repo = comp.get("repository")
