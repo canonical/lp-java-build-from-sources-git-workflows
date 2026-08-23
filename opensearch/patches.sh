@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PATCHES_DIR="${PRODUCT_DIR}/patches"
+PATCHES_DIR="${ROOT_DIR}/${PRODUCT}/patches"
 
 get_spotless_files() {
     case "$1" in
@@ -129,6 +129,15 @@ patch_reporting() {
     git diff --cached --quiet || git commit -m "Replace cert download urls"
 }
 
+patch_security() {
+    grep -q "exclusiveContent" build.gradle || return 0
+
+    sed -i.tmp '/exclusiveContent {/,/^        }/d' build.gradle
+    rm -f build.gradle.tmp
+    git add build.gradle
+    git diff --cached --quiet || git commit -m "Remove exclusiveContent block"
+}
+
 apply_patches() {
     local repo="$1"
 
@@ -155,6 +164,8 @@ apply_patches() {
 
     # replace github urls with lp urls for cert downloads
     [[ "$repo" == "opensearch-reporting" ]] && patch_reporting
+
+    [[ "$repo" == "opensearch-security" ]] && patch_security
 
     return 0
 }

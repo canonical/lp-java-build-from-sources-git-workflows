@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 import sys
 from pathlib import Path
-from ruamel.yaml import YAML
+import yaml
+
+
+class IndentDumper(yaml.SafeDumper):
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
+
 
 if len(sys.argv) < 5:
     print(
@@ -16,12 +22,13 @@ manifest_path = (
     root / f"repos/opensearch-build/manifests/{version}/{product}-{version}.yml"
 )
 
-yaml = YAML()
-yaml.preserve_quotes = True
-data = yaml.load(manifest_path)
+with open(manifest_path) as f:
+    data = yaml.safe_load(f)
 
 # remove functionTest component from dashboards (remove this if enabling dashboards tests)
-data["components"] = [c for c in data["components"] if not c["name"].startswith("functionalTest")]
+data["components"] = [
+    c for c in data["components"] if not c["name"].startswith("functionalTest")
+]
 
 for comp in data["components"]:
     repo = comp.get("repository")
@@ -52,4 +59,11 @@ if product == "opensearch":
             }
         )
 
-yaml.dump(data, manifest_path)
+with open(manifest_path, "w") as f:
+    yaml.dump(
+        data,
+        f,
+        Dumper=IndentDumper,
+        sort_keys=False,
+        indent=2,
+    )

@@ -5,14 +5,13 @@ command -v yq >/dev/null || { echo "yq is required"; exit 1; }
 
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PRODUCT_DIR="${ROOT_DIR}/${PRODUCT}"
 REPO_BASE="${ROOT_DIR}/repos/${PRODUCT}"
 
 . "${ROOT_DIR}/config.sh"
-. "${PRODUCT_DIR}/config.sh"
+. "${ROOT_DIR}/${PRODUCT}/config.sh"
 
 # fetch manifest
-MANIFEST_URL="https://raw.githubusercontent.com/opensearch-project/opensearch-build/${VERSION_REF}/manifests/${VERSION}/${PRODUCT}-${VERSION}.yml"
+MANIFEST_URL="https://raw.githubusercontent.com/opensearch-project/opensearch-build/${OPENSEARCH_BUILD_REF}/manifests/${VERSION}/${PRODUCT}-${VERSION}.yml"
 
 repos=$(curl -s "$MANIFEST_URL" \
     | yq '.components[].repository' \
@@ -29,18 +28,19 @@ repos=$(echo "$repos" | sort -u)
 
 checkout_or_create_branch() {
     local branch="$1"
-    local base_commit="$2"
-    local base_name="$3"
+    local upstream_ref="$2"
+    local upstream_commit
+    upstream_commit=$(git rev-parse "${upstream_ref}^{}")
 
     if git show-ref --verify --quiet "refs/heads/$branch"; then
         echo "Checkout existing $branch"
         git checkout "$branch"
-        if ! git merge-base --is-ancestor "$base_commit" HEAD; then
-            echo "ERROR: $branch exists and isn't based on $base_name"
+        if ! git merge-base --is-ancestor "$upstream_commit" HEAD; then
+            echo "ERROR: $branch exists and isn't based on $upstream_ref"
             exit 1
         fi
     else
-        git checkout -b "$branch" "$base_commit"
+        git checkout -b "$branch" "$upstream_commit"
         echo "Created LP branch ${branch}"
     fi
 }
@@ -56,7 +56,6 @@ while read -r repo; do
         esac
     fi
 
-    echo
     echo "$repo"
     cd "$REPO_BASE"
 
@@ -81,15 +80,13 @@ while read -r repo; do
         case "$VERSION" in
             2*)
                 git fetch -q origin 2.x:refs/remotes/origin/2.x || { echo "ERROR: failed to fetch origin 2.x"; exit 1; }
-                base_ref="origin/2.x"
+                checkout_or_create_branch "${PREFIX}-${VERSION}" "origin/2.x"
                 ;;
             3*)
                 git fetch -q origin main || { echo "ERROR: failed to fetch origin main"; exit 1; }
-                base_ref="origin/main"
+                checkout_or_create_branch "${PREFIX}-${VERSION}" "origin/main"
                 ;;
         esac
-        base_commit=$(git rev-parse "$base_ref")
-        checkout_or_create_branch "${PREFIX}-${VERSION}" "$base_commit" "$base_ref"
         version_tag="${VERSION}.0"
     else
         # get upstream tag for this version
@@ -103,11 +100,17 @@ while read -r repo; do
         [[ "$repo" == "OpenSearch" ]] && version_tag="${VERSION}"
         [[ "$repo" == "OpenSearch-Dashboards" ]] && version_tag="${VERSION}"
 
-        git fetch -q origin "refs/tags/${version_tag}:refs/tags/${version_tag}" || { echo "ERROR: tag ${version_tag} not found"; exit 1; }
+        if git fetch -q origin tag ${version_tag}; then
+            checkout_or_create_branch "${PREFIX}-${VERSION}" "$version_tag"
+        else
+            tag_override=$(plugin_fallback_ref "${local_name}")
+            if [[ -z "${tag_override}" ]]; then
+                 echo "ERROR: tag ${version_tag} not found"
+                 exit 1 
+            fi
+            checkout_or_create_branch "${PREFIX}-${VERSION}" "$tag_override"
+        fi
 
-        # get upstream commit from tag, create LP branch
-        release_commit=$(git rev-list -n1 "$version_tag")
-        checkout_or_create_branch "${PREFIX}-${VERSION}" "$release_commit" "$version_tag"
     fi
 
     git remote remove launchpad 2>/dev/null || true
@@ -115,11 +118,12 @@ while read -r repo; do
 
     lp_tag="${PREFIX}-v${version_tag}"
 
-    # only tag if tag doesn't exist or points to wrong commit
+    # tag if tag doesn't exist or points to wrong commit
     if ! git show-ref --verify --quiet "refs/tags/$lp_tag" || [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
-        git tag -f "$lp_tag"
+        git tag -f --no-sign "$lp_tag"
         echo " Created tag ${lp_tag} from upstream ${version_tag}"
     fi
+    echo
     #
     # if [[ "$repo" == "opensearch-prometheus-exporter" ]]; then
     #     # .gitattributes in this repo forces crlf changes

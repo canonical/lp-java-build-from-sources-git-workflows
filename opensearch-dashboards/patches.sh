@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PATCHES_DIR="${PRODUCT_DIR}/patches"
+PATCHES_DIR="${ROOT_DIR}/${PRODUCT}/patches"
 
 apply_patch() {
     local patch="$1"

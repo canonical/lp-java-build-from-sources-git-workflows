@@ -3,11 +3,10 @@ set -eu
 
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PRODUCT_DIR="${ROOT_DIR}/${PRODUCT}"
 REPO_BASE="${ROOT_DIR}/repos/${PRODUCT}"
 
 . "${ROOT_DIR}/config.sh"
-. "${PRODUCT_DIR}/patches.sh"
+. "${ROOT_DIR}/${PRODUCT}/patches.sh"
 
 BRANCH="${PREFIX}-${VERSION}"
 
@@ -35,6 +34,6 @@ for dir in "$REPO_BASE"/*; do
 
     # only retag if tag doesn't exist or points to wrong commit
     if [[ $(git rev-parse "$lp_tag^{}") != $(git rev-parse HEAD) ]]; then
-        git tag -f "$lp_tag"
+        git tag -f --no-sign "$lp_tag"
     fi
 done

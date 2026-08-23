@@ -3,10 +3,9 @@ set -eu
 
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PRODUCT_DIR="${ROOT_DIR}/${PRODUCT}"
 
 . "${ROOT_DIR}/config.sh"
-. "${PRODUCT_DIR}/config.sh"
+. "${ROOT_DIR}/${PRODUCT}/config.sh"
 
 cd "${ROOT_DIR}/repos/opensearch-build"
 

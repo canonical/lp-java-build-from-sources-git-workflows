@@ -15,6 +15,13 @@ echo
 # git ref for opensearch-build (if version tag is missing, add specific commit here)
 case "$VERSION" in
     # e.g.
-    # 3.7.0) export VERSION_REF="6d305d48a5493c907b1c17aae161b9b3dbcacdf2" ;;
-    *)     export VERSION_REF="$VERSION" ;;
+    # 3.7.0) export OPENSEARCH_BUILD_REF="6d305d48a5493c907b1c17aae161b9b3dbcacdf2" ;;
+    *)     export OPENSEARCH_BUILD_REF="$VERSION" ;;
 esac
+
+plugin_fallback_ref() {
+    case "$1" in 
+        # opensearch-prometheus-exporter) echo "3.7.0.0" ;;
+        *) echo "";;
+    esac
+}

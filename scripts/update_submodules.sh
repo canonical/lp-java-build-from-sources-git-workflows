@@ -37,6 +37,7 @@ for repo in "${REPOS[@]}"; do
 
     git remote remove launchpad 2>/dev/null || true
     git remote add launchpad "${LP_REMOTE}/${local_name}"
+    git fetch launchpad "$branch" 2>/dev/null || true
 
     local_head=$(git rev-parse HEAD)
     remote_head=$(git ls-remote launchpad "refs/heads/$branch" 2>/dev/null | cut -f1 || echo "")

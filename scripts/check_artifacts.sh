@@ -51,10 +51,10 @@ check_node() {
     fi
 
     version=$(cat "$nvmrc" | tr -d '[:space:]')
-    existing=$(jf rt search "${JFROG_REPO}/node/v${version}/*" 2>/dev/null || true)
+    existing=$(jf rt search "${JFROG_REPO}/node/v${version}*/*" 2>/dev/null || true)
 
     for arch in x64 arm64; do
-        tarball="node-v${version}-linux-${arch}.tar.gz"
+        tarball="node-v${version}.*-linux-${arch}.tar.gz"
         if ! echo "$existing" | grep -q "$tarball"; then
             echo "NOT on jfrog: node-v${version}/${tarball}"
             echo "node:v${version}:${tarball}" >> "$OUTPUT"
