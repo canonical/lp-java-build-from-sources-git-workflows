@@ -1,0 +1,11 @@
+diff --git a/scripts/default/opensearch-dashboards/build.sh b/scripts/default/opensearch-dashboards/build.sh
+index 0219aa70..0bf2c3b5 100755
+--- a/scripts/default/opensearch-dashboards/build.sh
++++ b/scripts/default/opensearch-dashboards/build.sh
+@@ -98,5 +98,5 @@ mkdir -p $OUTPUT/plugins
+ cp -r ../$PLUGIN_NAME/ ../OpenSearch-Dashboards/plugins
+ echo "BUILD MODULES FOR $PLUGIN_NAME"
+ CURR_DIR=`pwd`
+-cd ../OpenSearch-Dashboards; eval $NVM_CMD; yarn osd bootstrap
++cd ../OpenSearch-Dashboards; eval $NVM_CMD; yarn osd bootstrap --single-version=loose
+ echo "BUILD RELEASE ZIP FOR $PLUGIN_NAME"
