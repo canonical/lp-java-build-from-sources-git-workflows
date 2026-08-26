@@ -44,18 +44,18 @@ check_node() {
     echo ""
     echo "Checking node artifact..."
 
-    nvmrc="$REPO_BASE/opensearch-dashboards/opensearch-dashboards/.nvmrc"
-    if [[ ! -f "$nvmrc" ]]; then
-        echo "No .nvmrc found for opensearch-dashboards"
+    node_version_file="$REPO_BASE/opensearch-dashboards/opensearch-dashboards/.node-version"
+    if [[ ! -f "$node_version_file" ]]; then
+        echo "No .node-version found for opensearch-dashboards"
         return
     fi
 
-    version=$(cat "$nvmrc" | tr -d '[:space:]')
-    existing=$(jf rt search "${JFROG_REPO}/node/v${version}*/*" 2>/dev/null || true)
+    version=$(cat "$node_version_file" | tr -d '[:space:]')
+    existing=$(jf rt search "${JFROG_REPO}/node/v${version}/*" 2>/dev/null || true)
 
     for arch in x64 arm64; do
-        tarball="node-v${version}.*-linux-${arch}.tar.gz"
-        if ! echo "$existing" | grep -q "$tarball"; then
+        tarball="node-v${version}-linux-${arch}.tar.gz"
+        if ! echo "$existing" | grep -qF "$tarball"; then
             echo "NOT on jfrog: node-v${version}/${tarball}"
             echo "node:v${version}:${tarball}" >> "$OUTPUT"
         fi
