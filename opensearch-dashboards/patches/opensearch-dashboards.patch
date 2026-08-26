@@ -41,16 +41,10 @@ diff --git a/src/dev/build/lib/extraLaunchpadOptions.ts b/src/dev/build/lib/extr
 new file mode 100644
 --- /dev/null
 +++ b/src/dev/build/lib/extraLaunchpadOptions.ts
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,32 @@
 +import { HttpsProxyAgent } from 'https-proxy-agent';
 +
 +export function extraLaunchpadOptions() {
-+  const proxyEnv = process.env.https_proxy || process.env.http_proxy;
-+
-+  if (!proxyEnv) {
-+    throw new Error('Missing https_proxy or http_proxy environment variable.');
-+  }
-+
 +  if (!process.env.ARTIFACTORY_USER) {
 +    throw new Error('Missing ARTIFACTORY_USER environment variable.');
 +  }
@@ -59,22 +53,24 @@ new file mode 100644
 +    throw new Error('Missing ARTIFACTORY_PASSWORD environment variable.');
 +  }
 +
-+  const proxyUrl = proxyEnv.startsWith('http')
-+    ? proxyEnv
-+    : `http://${proxyEnv}`;
-+
-+  console.log(`Proxy is set to: ${proxyUrl}`);
-+  const proxyAgent = new HttpsProxyAgent(proxyUrl);
-+
 +  const auth = `${process.env.ARTIFACTORY_USER}:${process.env.ARTIFACTORY_PASSWORD}`;
 +  const encodedAuth = Buffer.from(auth).toString('base64');
 +
 +  const options = {
-+    httpsAgent: proxyAgent,
 +    headers: {
 +      Authorization: `Basic ${encodedAuth}`,
 +    },
 +  };
++
++  const proxyEnv = process.env.https_proxy || process.env.http_proxy;
++  if (proxyEnv) {
++    const proxyUrl = proxyEnv.startsWith('http')
++      ? proxyEnv
++      : `http://${proxyEnv}`;
++
++    console.log(`Proxy is set to: ${proxyUrl}`);
++    options.httpsAgent = new HttpsProxyAgent(proxyUrl);
++  }
 +
 +  return options;
 +}
