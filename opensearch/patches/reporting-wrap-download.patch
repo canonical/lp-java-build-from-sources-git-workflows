@@ -1,0 +1,31 @@
+diff --git a/build.gradle b/build.gradle
+index aeda509..28ea262 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -187,11 +187,22 @@ ext {
+     licenseFile = rootProject.file('LICENSE.txt')
+     noticeFile = rootProject.file('NOTICE.txt')
+     ['esnode.pem', 'esnode-key.pem', 'kirk.pem', 'kirk-key.pem', 'root-ca.pem', 'sample.pem', 'test-kirk.jks'].forEach { file ->
++        Thread.sleep(2000)
+         File local = getLayout().getBuildDirectory().file(file).get().getAsFile()
+-        download.run {
+-            src "https://raw.githubusercontent.com/opensearch-project/security/refs/heads/main/bwc-test/src/test/resources/security/" + file
+-            dest local
+-            overwrite false
++        for (int attempt = 1; attempt <= 3; attempt++) {
++            try {
++                download.run {
++                    src "https://raw.githubusercontent.com/opensearch-project/security/refs/heads/main/bwc-test/src/test/resources/security/" + file
++                    dest local
++                    overwrite false
++                }
++                break
++            } catch (Exception e) {
++                logger.warn("Failed to download ${file} (attempt ${attempt}/3)")
++                if (attempt == 3) throw e
++                logger.warn("Retrying in 5s...")
++                Thread.sleep(5000)
++            }
+         }
+         processTestResources {
+             from(local)

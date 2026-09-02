@@ -118,7 +118,14 @@ patch_prometheus_exporter() {
 }
 
 patch_reporting() {
+    # task to patch was added in 3.2.0 using this plugin, return if not present
+    grep -q "de.undercouch.download" build.gradle || return 0
+
+    # return if urls already replaced
     grep -q "git.launchpad.net" build.gradle && return 0
+
+    # wrap download code with retry to avoid launchpad throttling
+    git apply "${PATCHES_DIR}/reporting-wrap-download.patch"
 
     # replace with lp urls
     sed -i.tmp \
@@ -165,6 +172,7 @@ apply_patches() {
     # replace github urls with lp urls for cert downloads
     [[ "$repo" == "opensearch-reporting" ]] && patch_reporting
 
+    # remove `exclusiveContent` block redirecting downloads
     [[ "$repo" == "opensearch-security" ]] && patch_security
 
     return 0
