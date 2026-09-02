@@ -4,7 +4,7 @@ set -eu
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 . "${ROOT_DIR}/config.sh"
 
-REPO_BASE="${ROOT_DIR}/repos/opensearch-submodules"
+REPOS_DIR="${ROOT_DIR}/repos/opensearch-submodules"
 LP_REMOTE="git+ssh://${LP_USERNAME}@git.launchpad.net/~data-platform/opensearch-project-components/+git"
 
 REPOS=(
@@ -12,7 +12,7 @@ REPOS=(
     "https://github.com/nmslib/nmslib.git"
 )
 
-mkdir -p "$REPO_BASE"
+mkdir -p "$REPOS_DIR"
 
 for repo in "${REPOS[@]}"; do
     repo_name=$(basename "$repo" .git)
@@ -22,7 +22,7 @@ for repo in "${REPOS[@]}"; do
 
     echo
     echo "$local_name"
-    cd "$REPO_BASE"
+    cd "$REPOS_DIR"
 
     if [[ ! -d "$local_name" ]]; then
         echo "Cloning into '$local_name'..."

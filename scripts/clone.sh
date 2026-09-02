@@ -5,7 +5,7 @@ command -v yq >/dev/null || { echo "yq is required"; exit 1; }
 
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-REPO_BASE="${ROOT_DIR}/repos/${PRODUCT}"
+REPOS_DIR="${ROOT_DIR}/repos/${PRODUCT}"
 
 . "${ROOT_DIR}/config.sh"
 . "${ROOT_DIR}/${PRODUCT}/config.sh"
@@ -45,7 +45,7 @@ checkout_or_create_branch() {
     fi
 }
 
-mkdir -p "$REPO_BASE"
+mkdir -p "$REPOS_DIR"
 
 while read -r repo; do
     local_name="$(echo "$repo" | tr '[:upper:]' '[:lower:]')"
@@ -57,7 +57,7 @@ while read -r repo; do
     fi
 
     echo "$repo"
-    cd "$REPO_BASE"
+    cd "$REPOS_DIR"
 
     if [[ ! -d "$local_name" ]]; then
         echo "Cloning into '$local_name'..."
@@ -100,17 +100,8 @@ while read -r repo; do
         [[ "$repo" == "OpenSearch" ]] && version_tag="${VERSION}"
         [[ "$repo" == "OpenSearch-Dashboards" ]] && version_tag="${VERSION}"
 
-        if git fetch -q origin tag ${version_tag}; then
-            checkout_or_create_branch "${PREFIX}-${VERSION}" "$version_tag"
-        else
-            tag_override=$(plugin_fallback_ref "${local_name}")
-            if [[ -z "${tag_override}" ]]; then
-                 echo "ERROR: tag ${version_tag} not found"
-                 exit 1 
-            fi
-            checkout_or_create_branch "${PREFIX}-${VERSION}" "$tag_override"
-        fi
-
+        git fetch -q origin tag ${version_tag} || { echo "ERROR: tag ${version_tag} not found"; exit 1; }
+        checkout_or_create_branch "${PREFIX}-${VERSION}" "$version_tag"
     fi
 
     git remote remove launchpad 2>/dev/null || true

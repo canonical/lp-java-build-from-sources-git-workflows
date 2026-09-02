@@ -3,25 +3,19 @@ set -eu
 
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-REPO_BASE="${ROOT_DIR}/repos/${PRODUCT}"
+REPOS_DIR="${ROOT_DIR}/repos/${PRODUCT}"
 
 . "${ROOT_DIR}/config.sh"
 
 BRANCH="${PREFIX}-${VERSION}"
 
-for dir in "$REPO_BASE"/*; do
+for dir in "$REPOS_DIR"/*; do
     [[ -d "$dir" ]] || continue
     cd "$dir"
     repo=$(basename "$dir")
 
     echo
     echo "$repo"
-
-    # # check for uncommitted changes
-    # if ! git diff --quiet || ! git diff --cached --quiet; then
-    #     echo "ERROR: uncommitted changes in $repo"
-    #     exit 1
-    # fi
 
     git show-ref --verify --quiet "refs/heads/$BRANCH" || { echo "skip: no $BRANCH branch"; continue; }
     git checkout "$BRANCH"

@@ -4,7 +4,7 @@ set -eu
 command -v jf >/dev/null || { echo "jf is required. See https://jfrog.com/getcli/"; exit 1; }
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-REPO_BASE="${ROOT_DIR}/repos"
+REPOS_DIR="${ROOT_DIR}/repos"
 JFROG_REPO="dataplatform-generic-stable-local"
 OUTPUT="${ROOT_DIR}/artifacts/missing.txt"
 
@@ -14,14 +14,14 @@ mkdir -p "${ROOT_DIR}/artifacts"
 check_gradle() {
     echo "Checking gradle artifacts..."
 
-    if [[ ! -d "$REPO_BASE/opensearch" ]] || [[ -z "$(ls -A "$REPO_BASE/opensearch")" ]]; then
+    if [[ ! -d "$REPOS_DIR/opensearch" ]] || [[ -z "$(ls -A "$REPOS_DIR/opensearch")" ]]; then
         echo "No repos found. Run opensearch:clone"
         return
     fi
 
     existing=$(jf rt search "${JFROG_REPO}/gradle/gradle-*.zip" 2>/dev/null || true)
 
-    for repo in "$REPO_BASE"/opensearch/*; do
+    for repo in "$REPOS_DIR"/opensearch/*; do
         [[ -d "$repo" ]] || continue
         repo_name=$(basename "$repo")
 
@@ -44,7 +44,7 @@ check_node() {
     echo ""
     echo "Checking node artifact..."
 
-    node_version_file="$REPO_BASE/opensearch-dashboards/opensearch-dashboards/.node-version"
+    node_version_file="$REPOS_DIR/opensearch-dashboards/opensearch-dashboards/.node-version"
     if [[ ! -f "$node_version_file" ]]; then
         echo "No .node-version found for opensearch-dashboards"
         return

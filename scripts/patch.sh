@@ -3,14 +3,14 @@ set -eu
 
 PRODUCT="$1"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-REPO_BASE="${ROOT_DIR}/repos/${PRODUCT}"
+REPOS_DIR="${ROOT_DIR}/repos/${PRODUCT}"
 
 . "${ROOT_DIR}/config.sh"
 . "${ROOT_DIR}/${PRODUCT}/patches.sh"
 
 BRANCH="${PREFIX}-${VERSION}"
 
-for dir in "$REPO_BASE"/*; do
+for dir in "$REPOS_DIR"/*; do
     [[ -d "$dir" ]] || continue
     cd "$dir"
     repo=$(basename "$dir")
