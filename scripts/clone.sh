@@ -14,7 +14,7 @@ REPOS_DIR="${ROOT_DIR}/repos/${PRODUCT}"
 MANIFEST_URL="https://raw.githubusercontent.com/opensearch-project/opensearch-build/${OPENSEARCH_BUILD_REF}/manifests/${VERSION}/${PRODUCT}-${VERSION}.yml"
 
 repos=$(curl -s "$MANIFEST_URL" \
-    | yq '.components[].repository' \
+    | yq -r '.components[].repository' \
     | grep 'github.com/opensearch-project/' \
     | grep -v 'functional-test' \
     | sed 's|https://github.com/opensearch-project/||; s|\.git$||')
